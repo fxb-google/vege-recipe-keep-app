@@ -1,5 +1,5 @@
 /**
- * VegePower - UI Components & Template Generators
+ * VegePower - 1980s Retro Arcade UI Components & Template Generators
  * Clean metric system display & consolidated retail store pack sizes.
  */
 
@@ -21,41 +21,41 @@ const UIComponents = {
     if (metricUnit === 'g') {
       if (metricAmt >= 1000) {
         const kg = (metricAmt / 1000).toFixed(1).replace(/\.0$/, '');
-        return { display: `${kg} kg`, storePack: `🛒 Buy ${kg} kg` };
+        return { display: `${kg} kg`, storePack: `🛒 BUY ${kg} KG` };
       }
       if (lower.includes('tofu') || lower.includes('tempeh') || lower.includes('seitan')) {
         const packs = Math.max(1, Math.ceil(metricAmt / 250));
-        return { display: `${metricAmt}g`, storePack: `🛒 Buy ${packs}x 250g pack${packs > 1 ? 's' : ''}` };
+        return { display: `${metricAmt}g`, storePack: `🛒 BUY ${packs}X 250g PACK` };
       }
       if (lower.includes('lentil') || lower.includes('quinoa') || lower.includes('rice') || lower.includes('flour') || lower.includes('gluten') || lower.includes('pasta') || lower.includes('oats')) {
         const bags = Math.max(1, Math.ceil(metricAmt / 500));
-        return { display: `${metricAmt}g`, storePack: `🛒 Buy ${bags}x 500g bag${bags > 1 ? 's' : ''}` };
+        return { display: `${metricAmt}g`, storePack: `🛒 BUY ${bags}X 500g BAG` };
       }
       if (lower.includes('chickpea') || lower.includes('bean') || lower.includes('corn')) {
         const cans = Math.max(1, Math.ceil(metricAmt / 400));
-        return { display: `${metricAmt}g`, storePack: `🛒 Buy ${cans}x 400g can${cans > 1 ? 's' : ''}` };
+        return { display: `${metricAmt}g`, storePack: `🛒 BUY ${cans}X 400g CAN` };
       }
-      return { display: `${metricAmt}g`, storePack: `🛒 Buy ~${metricAmt}g` };
+      return { display: `${metricAmt}g`, storePack: `🛒 BUY ~${metricAmt}g` };
     }
 
     // Metric Milliliters
     if (metricUnit === 'ml') {
       if (metricAmt >= 1000) {
         const l = (metricAmt / 1000).toFixed(1).replace(/\.0$/, '');
-        return { display: `${l} L`, storePack: `🛒 Buy ${l} L bottle/carton` };
+        return { display: `${l} L`, storePack: `🛒 BUY ${l} L BOTTLE` };
       }
-      if (metricAmt <= 250) return { display: `${metricAmt}ml`, storePack: `🛒 Buy 1x 250ml bottle` };
-      if (metricAmt <= 500) return { display: `${metricAmt}ml`, storePack: `🛒 Buy 1x 500ml bottle` };
-      return { display: `${metricAmt}ml`, storePack: `🛒 Buy 1x 1L bottle` };
+      if (metricAmt <= 250) return { display: `${metricAmt}ml`, storePack: `🛒 BUY 1X 250ml BOTTLE` };
+      if (metricAmt <= 500) return { display: `${metricAmt}ml`, storePack: `🛒 BUY 1X 500ml BOTTLE` };
+      return { display: `${metricAmt}ml`, storePack: `🛒 BUY 1X 1L BOTTLE` };
     }
 
     // Cans / Packs / Jars
     if (metricUnit.includes('can')) {
       const numCans = Math.max(1, Math.ceil(metricAmt));
-      return { display: `${numCans} cans`, storePack: `🛒 Buy ${numCans}x 400g cans` };
+      return { display: `${numCans} CANS`, storePack: `🛒 BUY ${numCans}X 400g CANS` };
     }
 
-    return { display: `${metricAmt} ${metricUnit}`, storePack: `🛒 ${metricAmt} ${metricUnit}` };
+    return { display: `${metricAmt} ${metricUnit.toUpperCase()}`, storePack: `🛒 ${metricAmt} ${metricUnit.toUpperCase()}` };
   },
 
   /**
@@ -71,31 +71,31 @@ const UIComponents = {
           <img src="${recipe.image}" alt="${recipe.title}" class="card-image" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80'">
           <div class="card-badges-top">
             <span class="badge badge-source ${sourceClass}">${sourceLabel}</span>
-            <span class="badge badge-protein"><i data-lucide="zap" style="width:12px"></i> ${recipe.proteinGrams}g Protein</span>
+            <span class="badge pixel-badge-gold"><i data-lucide="zap" style="width:10px"></i> +${recipe.proteinGrams}g HP</span>
           </div>
         </div>
 
         <div class="card-body">
           <div class="card-meta">
-            <span><i data-lucide="clock" style="width:14px"></i> ${recipe.prepTime}</span>
+            <span><i data-lucide="clock" style="width:12px"></i> ${recipe.prepTime}</span>
             <span>&bull;</span>
-            <span><i data-lucide="flame" style="width:14px"></i> ${recipe.calories} kcal</span>
+            <span><i data-lucide="flame" style="width:12px"></i> ${recipe.calories} KCAL</span>
             <span>&bull;</span>
-            <span><i data-lucide="users" style="width:14px"></i> ${recipe.servings} serv</span>
+            <span><i data-lucide="users" style="width:12px"></i> ${recipe.servings} SERV</span>
           </div>
 
           <h3 class="card-title">${recipe.title}</h3>
           <p class="card-description">${recipe.description}</p>
 
           <div class="card-footer">
-            <button class="btn btn-add-cart ${isSelected ? 'added' : ''}" data-recipe-id="${recipe.id}">
+            <button class="btn pixel-btn ${isSelected ? 'pixel-btn-yellow' : 'pixel-btn-green'} btn-add-cart" data-recipe-id="${recipe.id}">
               <i data-lucide="${isSelected ? 'check' : 'plus'}"></i>
-              <span>${isSelected ? 'Added to List' : 'Add Ingredients'}</span>
+              <span>${isSelected ? 'ADDED' : 'ADD INGREDIENTS'}</span>
             </button>
             
-            <button class="btn btn-outline btn-sm btn-view-detail" style="padding: 6px 12px; font-size: 0.8rem;">
-              <span>View Recipe</span>
-              <i data-lucide="chevron-right" style="width:14px"></i>
+            <button class="btn pixel-btn pixel-btn-cyan btn-view-detail" style="padding: 6px 10px; font-size: 0.65rem;">
+              <span>INSPECT</span>
+              <i data-lucide="chevron-right" style="width:12px"></i>
             </button>
           </div>
         </div>
@@ -114,8 +114,8 @@ const UIComponents = {
         <li class="ingredient-item">
           <span>${ing.name}</span>
           <div style="text-align:right">
-            <div class="ingredient-amount" style="font-weight:700">${amount} ${ing.unit}</div>
-            <div style="font-size:0.75rem; color:var(--text-muted); font-weight:600">${pkg.storePack}</div>
+            <div class="ingredient-amount" style="font-weight:700">${amount} ${ing.unit.toUpperCase()}</div>
+            <div style="font-size:0.75rem; color:var(--arcade-yellow); font-weight:700">${pkg.storePack}</div>
           </div>
         </li>
       `;
@@ -136,36 +136,36 @@ const UIComponents = {
       <div class="detail-title-section">
         <div style="display:flex; gap:8px; margin-bottom:8px;">
           <span class="badge badge-source ${recipe.proteinSource}">${(recipe.proteinSource || 'tofu').toUpperCase()}</span>
-          <span class="badge badge-protein"><i data-lucide="zap" style="width:12px"></i> ${recipe.proteinGrams * servingsMultiplier}g Total Protein</span>
+          <span class="badge pixel-badge-gold"><i data-lucide="zap" style="width:12px"></i> +${recipe.proteinGrams * servingsMultiplier}g TOTAL HP</span>
         </div>
         <h2 class="detail-title">${recipe.title}</h2>
-        <p style="color: var(--text-secondary); font-size: 0.92rem;">${recipe.description}</p>
+        <p class="pixel-text-sub" style="margin-bottom:12px;">${recipe.description}</p>
 
         <div class="detail-macros-grid">
           <div class="macro-box">
             <div class="macro-box-val">${recipe.proteinGrams * servingsMultiplier}g</div>
-            <div class="macro-box-lbl">Protein</div>
+            <div class="macro-box-lbl">PROTEIN (HP)</div>
           </div>
           <div class="macro-box">
             <div class="macro-box-val">${recipe.calories * servingsMultiplier}</div>
-            <div class="macro-box-lbl">Calories</div>
+            <div class="macro-box-lbl">CALORIES</div>
           </div>
           <div class="macro-box">
             <div class="macro-box-val">${recipe.prepTime}</div>
-            <div class="macro-box-lbl">Prep</div>
+            <div class="macro-box-lbl">TIME</div>
           </div>
           <div class="macro-box">
             <div class="macro-box-val">${recipe.servings * servingsMultiplier}</div>
-            <div class="macro-box-lbl">Servings</div>
+            <div class="macro-box-lbl">SERVINGS</div>
           </div>
         </div>
 
         <div class="ingredients-section-header">
-          <h3>Ingredients (Metric System)</h3>
+          <h3>METRIC INGREDIENTS</h3>
           <div class="serving-selector-inline">
-            <span>Servings:</span>
+            <span>SERVINGS:</span>
             <button class="serving-btn btn-modal-servings-dec" data-recipe-id="${recipe.id}">-</button>
-            <strong style="color:var(--forest-900)">${recipe.servings * servingsMultiplier}</strong>
+            <strong class="pixel-text-yellow">${recipe.servings * servingsMultiplier}</strong>
             <button class="serving-btn btn-modal-servings-inc" data-recipe-id="${recipe.id}">+</button>
           </div>
         </div>
@@ -174,15 +174,15 @@ const UIComponents = {
           ${ingredientsHtml}
         </ul>
 
-        <h3 style="margin-bottom:14px;">Step-by-Step Instructions</h3>
+        <h3 class="pixel-text-cyan" style="margin-bottom:14px;">STEP-BY-STEP MISSION INSTRUCTIONS</h3>
         <div class="instructions-list" style="margin-bottom:24px;">
           ${instructionsHtml}
         </div>
 
         <div style="display:flex; gap:12px; margin-top:20px;">
-          <button class="btn btn-primary btn-modal-add-cart ${isAdded ? 'added' : ''}" data-recipe-id="${recipe.id}" style="flex:1;">
+          <button class="btn pixel-btn ${isAdded ? 'pixel-btn-yellow' : 'pixel-btn-green'} btn-modal-add-cart" data-recipe-id="${recipe.id}" style="flex:1;">
             <i data-lucide="${isAdded ? 'check' : 'plus'}"></i>
-            <span>${isAdded ? 'Added to Shopping List' : 'Add Ingredients to Shopping List'}</span>
+            <span>${isAdded ? 'ADDED TO INVENTORY' : 'ADD INGREDIENTS TO INVENTORY'}</span>
           </button>
         </div>
       </div>
@@ -195,10 +195,10 @@ const UIComponents = {
   renderShoppingAisles(shoppingList, globalMultiplier = 1) {
     if (Object.keys(shoppingList).length === 0 || Object.values(shoppingList).every(arr => arr.length === 0)) {
       return `
-        <div class="empty-state" style="padding:40px 10px;">
+        <div class="empty-state pixel-border-box" style="padding:30px 10px;">
           <div class="empty-icon"><i data-lucide="shopping-bag"></i></div>
-          <h3>Your Shopping List is Empty</h3>
-          <p>Browse recipes and click "Add" to generate your aggregated metric ingredient checklist for Google Keep.</p>
+          <h3 class="pixel-text-gold">INVENTORY EMPTY</h3>
+          <p class="pixel-text-sub">ADD POWER RECIPES TO GENERATE YOUR AGGREGATED METRIC CHECKLIST FOR GOOGLE KEEP.</p>
         </div>
       `;
     }
@@ -223,22 +223,22 @@ const UIComponents = {
 
         return `
           <div class="aisle-item ${item.checked ? 'checked' : ''}">
-            <label class="aisle-item-checkbox" style="display:flex; align-items:center; gap:10px; flex:1;">
+            <label class="aisle-item-checkbox" style="display:flex; align-items:center; gap:10px; flex:1; cursor:pointer;">
               <input type="checkbox" data-aisle="${aisle}" data-item-idx="${idx}" ${item.checked ? 'checked' : ''}>
               <div>
-                <div style="font-weight:600">${item.name}</div>
-                <div style="font-size:0.75rem; color:var(--emerald-600); font-weight:700">${pkg.storePack}</div>
+                <div style="font-weight:700; color:#fff;">${item.name}</div>
+                <div style="font-size:0.8rem; color:var(--arcade-yellow); font-weight:700">${pkg.storePack}</div>
               </div>
             </label>
-            <span style="font-weight:700; color:var(--text-secondary); font-size:0.88rem;">${pkg.display}</span>
+            <span style="font-family:var(--font-subpixel); font-weight:700; color:var(--arcade-cyan); font-size:0.8rem;">${pkg.display}</span>
           </div>
         `;
       }).join('');
 
       html += `
-        <div class="shopping-aisle">
-          <div class="aisle-header">${icon} ${aisle} (${items.length})</div>
-          <div class="aisle-items-list">${itemsHtml}</div>
+        <div class="shopping-aisle" style="margin-bottom:16px;">
+          <div class="aisle-header pixel-text-gold" style="margin-bottom:8px; font-family:var(--font-pixel); font-size:0.75rem;">${icon} ${aisle.toUpperCase()} (${items.length})</div>
+          <div class="aisle-items-list" style="display:flex; flex-direction:column; gap:8px;">${itemsHtml}</div>
         </div>
       `;
     }
