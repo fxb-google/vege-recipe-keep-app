@@ -71,7 +71,7 @@
           <!-- Version Tag -->
           <div class="app-version-badge" title="Live Application Version">
             <span class="version-pulse-dot"></span>
-            <span class="version-text">v3.5-ADMIN</span>
+            <span class="version-text">v3.8-DIGEST</span>
           </div>
         </div>
       </div>
@@ -274,8 +274,20 @@
             </div>
           </div>
 
-          <!-- Tab 2: Email Subscribers Panel -->
+          <!-- Tab 2: Email Subscribers Panel & Digest Dispatch -->
           <div id="admin-panel-subscribers" class="admin-panel hidden">
+            <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+              <div>
+                <h4 style="margin: 0 0 4px 0; color: var(--forest-900); font-size: 1rem;"><i data-lucide="send"></i> Instant Digest Broadcast</h4>
+                <p style="margin: 0; font-size: 0.82rem; color: var(--text-secondary);">Send this week's top 3 voted recipes and Keep checklist digest immediately to all registered subscribers.</p>
+              </div>
+
+              <!-- Immediate Digest Dispatch Button -->
+              <button id="btn-send-digest-now" class="btn btn-primary">
+                <i data-lucide="rocket"></i> Send Digest Now
+              </button>
+            </div>
+
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
               <p style="font-size: 0.88rem; color: var(--text-secondary);">
                 Registered subscriber email addresses for weekly recipe digests.
@@ -288,6 +300,29 @@
             <div id="admin-subscribers-table-container" style="display: flex; flex-direction: column; gap: 10px;">
               <!-- Populated dynamically via JS -->
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Digest Sent Confirmation & Preview Modal -->
+    <div id="digest-modal" class="modal-backdrop hidden">
+      <div class="modal-card modal-lg" style="max-width: 680px;">
+        <div class="modal-header" style="padding: 24px 28px 0 28px;">
+          <h3><i data-lucide="check-circle" style="color:var(--emerald-600)"></i> Weekly Digest Broadcast Sent!</h3>
+          <button class="modal-close" id="btn-close-digest-modal">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+
+        <div class="modal-body" style="padding: 20px 28px 28px 28px; overflow-y: auto; max-height: 75vh;">
+          <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid var(--emerald-500); padding: 14px 18px; border-radius: var(--radius-md); font-size: 0.9rem; font-weight: 700; color: var(--forest-900); margin-bottom: 18px;" id="digest-sent-summary-text">
+            Dispatched to subscribers!
+          </div>
+
+          <h4 style="margin-bottom: 10px; font-size: 1rem;">Email Broadcast Content Preview:</h4>
+          <div id="digest-email-preview" style="border: 1px solid var(--border-light); border-radius: var(--radius-md); overflow: hidden; background: #ffffff; padding: 16px;">
+            <!-- Rendered preview -->
           </div>
         </div>
       </div>
