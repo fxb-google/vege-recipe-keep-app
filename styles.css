@@ -170,6 +170,34 @@ button {
   gap: 10px;
 }
 
+/* Header Shopping List Button */
+.btn-cart-header {
+  background: var(--forest-900);
+  color: #ffffff;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(6, 78, 59, 0.2);
+  transition: all 0.2s ease;
+}
+
+.btn-cart-header:hover {
+  background: #04382b;
+  transform: translateY(-1px);
+}
+
+.header-cart-badge {
+  background: var(--emerald-500);
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
 /* Top-Right Version Badge */
 .app-version-badge {
   display: inline-flex;
@@ -547,34 +575,7 @@ button {
   border-color: var(--forest-900);
 }
 
-/* Infinite Scroll Sentinel */
-.infinite-scroll-sentinel {
-  text-align: center;
-  padding: 40px 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  color: var(--text-muted);
-  font-size: 0.9rem;
-}
-
-.spinner {
-  width: 28px;
-  height: 28px;
-  border: 3px solid rgba(6, 78, 59, 0.15);
-  border-top-color: var(--forest-900);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* ==========================================================================
-   Recipe Detail Modal & Side Spacing Fixes
-   ========================================================================== */
-
+/* Modal Backdrops & Cards */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -585,7 +586,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px 16px; /* Ensures space on left/right screen edges on mobile */
+  padding: 24px 16px;
   animation: fadeIn 0.25s ease forwards;
 }
 
@@ -621,16 +622,13 @@ button {
 
 .modal-scroll-content {
   overflow-y: auto;
-  padding: 28px 32px; /* Generous side padding inside the modal */
+  padding: 28px 32px;
 }
 
 @media (max-width: 640px) {
-  .modal-scroll-content {
-    padding: 20px 20px; /* Comfortable padding on mobile screens */
-  }
+  .modal-scroll-content { padding: 20px 20px; }
 }
 
-/* Inset Recipe Detail Hero Image with Side Margins */
 .recipe-detail-header {
   position: relative;
   margin-bottom: 24px;
@@ -648,9 +646,7 @@ button {
 }
 
 @media (max-width: 640px) {
-  .detail-hero-image {
-    height: 200px;
-  }
+  .detail-hero-image { height: 200px; }
 }
 
 .detail-title-section {
@@ -672,9 +668,7 @@ button {
 }
 
 @media (max-width: 480px) {
-  .detail-macros-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  .detail-macros-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 .macro-box {
@@ -785,7 +779,7 @@ button {
   line-height: 1.55;
 }
 
-/* Mobile Bottom Bar */
+/* Mobile & Desktop Floating Bottom Bar */
 .mobile-bottom-bar {
   position: fixed;
   bottom: 0;
@@ -802,6 +796,7 @@ button {
   justify-content: space-between;
   padding: 0 20px;
   box-shadow: 0 -6px 25px rgba(6, 78, 59, 0.08);
+  cursor: pointer;
 }
 
 .btn-cart-summary {
@@ -857,6 +852,13 @@ button {
 
 /* Drawers */
 .drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 20, 18, 0.65);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 250;
+  display: flex;
   justify-content: flex-end;
   padding: 0;
 }
@@ -864,13 +866,59 @@ button {
 .drawer-panel {
   background: var(--bg-card);
   width: 100%;
-  max-width: 560px;
-  height: 94vh;
+  max-width: 580px;
+  height: 100vh;
   border-top-left-radius: var(--radius-lg);
-  border-top-right-radius: var(--radius-lg);
+  border-bottom-left-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-lg);
+  animation: slideDrawer 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideDrawer {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.drawer-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.drawer-icon {
+  width: 24px;
+  height: 24px;
+  color: var(--forest-900);
+}
+
+.drawer-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.drawer-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .keep-export-banner {
@@ -878,6 +926,12 @@ button {
   border: 1px solid rgba(245, 158, 11, 0.3);
   border-radius: var(--radius-md);
   padding: 18px;
+}
+
+.drawer-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-glass);
+  background: var(--bg-secondary);
 }
 
 /* Toast */
