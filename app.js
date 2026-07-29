@@ -1,7 +1,7 @@
 /**
  * VegePower - Main Application Controller
  * Features: Light Plant Theme, Daily Auto-Sync & Deduplication Engine,
- * Infinite Scrolling with IntersectionObserver, and Google Keep Export.
+ * Direct Grid Display (No Infinite Scroll), and Google Keep Exporter.
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -19,11 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     globalMultiplier: 2,
     checkedIngredients: new Set(),
     currentDetailRecipeId: null,
-    theme: localStorage.getItem('vege_theme') || 'light',
-    // Infinite Scroll Pagination State
-    pageSize: 6,
-    currentPage: 1,
-    isLoadingMore: false
+    theme: localStorage.getItem('vege_theme') || 'light'
   };
 
   // Set Theme
@@ -38,8 +34,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnClearSearch = document.getElementById('btn-clear-search');
   const sortSelect = document.getElementById('sort-select');
   const proteinPills = document.getElementById('protein-filter-pills');
-  const infiniteSentinel = document.getElementById('infinite-scroll-sentinel');
-  const syncBadge = document.getElementById('sync-badge');
 
   // Cart & Drawer DOM
   const cartBadgeCount = document.getElementById('cart-badge-count');
@@ -78,13 +72,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const syncResult = await RecipeApiService.checkAndRunDailyAutoFetch(AppState.allRecipes);
       if (syncResult.synced && syncResult.newRecipes.length > 0) {
-        // Save new unique recipes to IndexedDB database
         for (const recipe of syncResult.newRecipes) {
           await VegeDB.saveRecipe(recipe);
           AppState.allRecipes.unshift(recipe);
         }
         UIComponents.showToast(`Daily Sync: Added ${syncResult.newRecipes.length} new unique plant recipes!`, 'success');
-        renderGrid(true);
+        renderGrid();
       }
     } catch (err) {
       console.warn("Daily sync error:", err);
@@ -92,7 +85,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /* ==========================================================================
-     Filtering, Sorting & Infinite Scroll Pagination
+     Filtering & Sorting (Direct Grid Rendering - No Pagination)
      ========================================================================== */
   function getFilteredRecipes() {
     let list = [...AppState.allRecipes];
@@ -125,66 +118,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     return list;
   }
 
-  function renderGrid(resetPagination = true) {
-    if (resetPagination) {
-      AppState.currentPage = 1;
-    }
-
+  function renderGrid() {
     const filtered = getFilteredRecipes();
     recipeCountBadge.textContent = `${filtered.length} recipe${filtered.length === 1 ? '' : 's'}`;
 
     if (filtered.length === 0) {
       recipeGrid.classList.add('hidden');
       emptyState.classList.remove('hidden');
-      infiniteSentinel.classList.add('hidden');
       return;
     }
 
     emptyState.classList.add('hidden');
     recipeGrid.classList.remove('hidden');
 
-    // Slice for infinite scrolling batch
-    const visibleCount = AppState.currentPage * AppState.pageSize;
-    const paginatedList = filtered.slice(0, visibleCount);
-
-    recipeGrid.innerHTML = paginatedList.map(r => 
+    // Render all matching recipes at once into the grid
+    recipeGrid.innerHTML = filtered.map(r => 
       UIComponents.renderRecipeCard(r, AppState.selectedRecipeIds.has(r.id))
     ).join('');
-
-    // Toggle Infinite Scroll Sentinel
-    if (visibleCount < filtered.length) {
-      infiniteSentinel.classList.remove('hidden');
-    } else {
-      infiniteSentinel.classList.add('hidden');
-    }
 
     if (window.lucide) lucide.createIcons();
     updateCartBadges();
   }
-
-  function loadNextPage() {
-    const filtered = getFilteredRecipes();
-    const maxPages = Math.ceil(filtered.length / AppState.pageSize);
-
-    if (AppState.currentPage < maxPages && !AppState.isLoadingMore) {
-      AppState.isLoadingMore = true;
-      AppState.currentPage++;
-
-      setTimeout(() => {
-        renderGrid(false);
-        AppState.isLoadingMore = false;
-      }, 300);
-    }
-  }
-
-  // IntersectionObserver for Infinite Scrolling
-  const observer = new IntersectionObserver((entries) => {
-    if (entries[0].isIntersecting) {
-      loadNextPage();
-    }
-  }, { threshold: 0.2 });
-
-  if (infiniteSentinel) observer.observe(infiniteSentinel);
 
   /* ==========================================================================
      Cart & Shopping List Logic
@@ -293,19 +247,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   searchInput.addEventListener('input', (e) => {
     AppState.searchQuery = e.target.value;
     btnClearSearch.classList.toggle('hidden', AppState.searchQuery === '');
-    renderGrid(true);
+    renderGrid();
   });
 
   btnClearSearch.addEventListener('click', () => {
     searchInput.value = '';
     AppState.searchQuery = '';
     btnClearSearch.classList.add('hidden');
-    renderGrid(true);
+    renderGrid();
   });
 
   sortSelect.addEventListener('change', (e) => {
     AppState.sortBy = e.target.value;
-    renderGrid(true);
+    renderGrid();
   });
 
   proteinPills.addEventListener('click', (e) => {
@@ -316,7 +270,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     pill.classList.add('active');
 
     AppState.activeFilter = pill.dataset.filter;
-    renderGrid(true);
+    renderGrid();
   });
 
   document.getElementById('btn-reset-filters').addEventListener('click', () => {
@@ -325,7 +279,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     AppState.activeFilter = 'all';
     proteinPills.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
     proteinPills.querySelector('[data-filter="all"]').classList.add('active');
-    renderGrid(true);
+    renderGrid();
   });
 
   recipeGrid.addEventListener('click', (e) => {
@@ -342,7 +296,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         AppState.selectedRecipeIds.add(id);
         UIComponents.showToast('Added ingredients to shopping list!', 'success');
       }
-      renderGrid(false);
+      renderGrid();
       return;
     }
 
@@ -378,7 +332,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         UIComponents.showToast('Added to shopping list!', 'success');
       }
       openRecipeDetailModal(id);
-      renderGrid(false);
+      renderGrid();
     }
   });
 
@@ -418,7 +372,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   btnClearShoppingList.addEventListener('click', () => {
     AppState.selectedRecipeIds.clear();
     AppState.checkedIngredients.clear();
-    renderGrid(false);
+    renderGrid();
     renderDrawer();
     UIComponents.showToast('Shopping list cleared', 'info');
   });
@@ -479,7 +433,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const id = e.target.closest('.btn-import-online').dataset.onlineId;
         const targetRecipe = fetched.find(r => r.id === id);
         if (targetRecipe) {
-          // Check for duplication before saving
           if (RecipeApiService.isDuplicateRecipe(targetRecipe, AppState.allRecipes)) {
             UIComponents.showToast('Recipe already exists in database!', 'info');
             return;
@@ -489,7 +442,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           AppState.allRecipes.unshift(targetRecipe);
           AppState.selectedRecipeIds.add(targetRecipe.id);
           onlineModal.classList.add('hidden');
-          renderGrid(true);
+          renderGrid();
           UIComponents.showToast(`Saved "${targetRecipe.title}" to Database & Shopping List!`, 'success');
         }
       });
@@ -504,6 +457,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Initial Load & Daily Sync Check
-  renderGrid(true);
+  renderGrid();
   await triggerDailySync();
 });
