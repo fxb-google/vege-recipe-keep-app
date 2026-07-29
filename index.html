@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#0d131a">
-  <meta name="description" content="Fetch high-protein vegetarian recipes (seitan, tofu, tempeh, legumes) and export ingredient shopping lists directly to Google Keep.">
-  <title>VegePower &bull; Recipes to Google Keep</title>
+  <meta name="theme-color" content="#faf8f5">
+  <meta name="description" content="Fetch high-protein plant recipes (seitan, tofu, tempeh, legumes) with daily deduplication sync and Google Keep checklist export.">
+  <title>VegePower &bull; Plant Recipes & Google Keep Sync</title>
   
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -19,7 +19,7 @@
 </head>
 <body>
   <div id="app">
-    <!-- Top Mobile Navigation Header -->
+    <!-- Top Header -->
     <header class="site-header">
       <div class="header-container">
         <div class="brand">
@@ -27,35 +27,40 @@
             <i data-lucide="leaf"></i>
           </div>
           <div class="brand-text">
-            <span class="brand-title">Vege<span class="highlight">Power</span></span>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="brand-title">VegePower</span>
+              <span id="sync-badge" class="sync-indicator">
+                <i data-lucide="refresh-cw" style="width:12px"></i> Daily Sync
+              </span>
+            </div>
             <span class="brand-subtitle">Plant Protein & Keep Sync</span>
           </div>
         </div>
 
         <div class="header-actions">
-          <button id="btn-fetch-online" class="btn btn-outline btn-sm glass" title="Fetch Online Recipes">
+          <button id="btn-fetch-online" class="btn btn-outline btn-sm" title="Search Online Recipes">
             <i data-lucide="globe"></i>
-            <span class="btn-text">Online Fetch</span>
+            <span class="btn-text">Search Online</span>
           </button>
           
-          <button id="btn-theme-toggle" class="btn-icon glass" title="Toggle Theme">
+          <button id="btn-theme-toggle" class="btn-icon" title="Toggle Theme">
             <i data-lucide="sun" class="sun-icon"></i>
             <i data-lucide="moon" class="moon-icon"></i>
           </button>
         </div>
       </div>
 
-      <!-- Search & Quick Filters Container -->
+      <!-- Search & Filters Container -->
       <div class="search-filter-section">
         <div class="search-bar-container">
           <i data-lucide="search" class="search-icon"></i>
-          <input type="text" id="search-input" placeholder="Search seitan, tofu, ingredients, dishes..." autocomplete="off">
+          <input type="text" id="search-input" placeholder="Search seitan, tofu, ingredients, power bowls..." autocomplete="off">
           <button id="btn-clear-search" class="btn-clear hidden">
             <i data-lucide="x"></i>
           </button>
         </div>
 
-        <!-- Filter Pills Bar (Horizontal Scrollable on Mobile) -->
+        <!-- Filter Pills Bar -->
         <div class="filter-pills-wrapper">
           <div class="filter-pills" id="protein-filter-pills">
             <button class="pill active" data-filter="all">
@@ -87,10 +92,10 @@
     <!-- Main Content Area -->
     <main class="main-content">
       <div class="container">
-        <!-- Active Filter / Results Bar -->
+        <!-- Filter Header -->
         <div class="results-header">
           <div class="results-info">
-            <h2 id="section-title">High-Protein Plant Recipes</h2>
+            <h2 id="section-title">Plant-Protein Recipes</h2>
             <span id="recipe-count-badge" class="badge badge-secondary">0 recipes</span>
           </div>
 
@@ -121,10 +126,16 @@
             <i data-lucide="rotate-ccw"></i> Reset Filters
           </button>
         </div>
+
+        <!-- Infinite Scroll Sentinel Element -->
+        <div id="infinite-scroll-sentinel" class="infinite-scroll-sentinel">
+          <div class="spinner"></div>
+          <span>Loading more delicious plant recipes...</span>
+        </div>
       </div>
     </main>
 
-    <!-- Mobile Floating Bottom Bar / Sticky Cart -->
+    <!-- Mobile Floating Bottom Bar -->
     <div class="mobile-bottom-bar" id="mobile-bottom-bar">
       <button id="btn-open-cart-mobile" class="btn-cart-summary">
         <div class="cart-icon-wrapper">
@@ -149,40 +160,41 @@
         <button class="modal-close" id="btn-close-recipe-modal">
           <i data-lucide="x"></i>
         </button>
-
         <div class="modal-scroll-content" id="recipe-modal-content">
           <!-- Populated dynamically via JS -->
         </div>
       </div>
     </div>
 
-    <!-- Online Recipe Search & Import Modal -->
+    <!-- Online Search Modal -->
     <div id="online-modal" class="modal-backdrop hidden">
       <div class="modal-card modal-lg">
-        <div class="modal-header">
-          <h3><i data-lucide="globe"></i> Fetch Recipes Online</h3>
+        <div class="modal-header" style="padding:20px 24px 0 24px;">
+          <h3><i data-lucide="globe"></i> Search & Import Online Recipes</h3>
           <button class="modal-close" id="btn-close-online-modal">
             <i data-lucide="x"></i>
           </button>
         </div>
-        <div class="modal-body">
-          <p class="modal-desc">Search public online recipe databases for vegetarian & vegan dishes featuring tofu, seitan, or legumes.</p>
+        <div class="modal-body" style="padding:20px 24px;">
+          <p style="color:var(--text-secondary); margin-bottom:14px; font-size:0.9rem;">
+            Search public online recipe databases. Imported recipes are automatically checked for duplicates and saved to your database.
+          </p>
           
-          <div class="online-search-box">
-            <input type="text" id="online-search-input" placeholder="e.g. Tofu, Lentil, Seitan, Curry..." value="Tofu">
+          <div class="online-search-box" style="display:flex; gap:10px; margin-bottom:20px;">
+            <input type="text" id="online-search-input" placeholder="e.g. Tofu, Lentil, Seitan, Curry..." value="Tofu" style="flex:1; padding:10px 14px; border-radius:var(--radius-md); border:1px solid var(--border-light); background:var(--bg-card); color:var(--text-primary);">
             <button id="btn-search-online-api" class="btn btn-primary">
               <i data-lucide="search"></i> Search Online
             </button>
           </div>
 
-          <div id="online-results-container" class="online-results-grid">
+          <div id="online-results-container" class="online-results-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:16px; max-height:50vh; overflow-y:auto;">
             <!-- Results rendered via JS -->
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Shopping List & Google Keep Export Drawer (Bottom Sheet on Mobile) -->
+    <!-- Shopping List & Google Keep Export Drawer -->
     <div id="shopping-drawer" class="drawer-backdrop hidden">
       <div class="drawer-panel">
         <div class="drawer-header">
@@ -200,7 +212,7 @@
 
         <div class="drawer-body">
           <!-- Servings Adjuster Bar -->
-          <div class="servings-global-control glass-panel">
+          <div class="servings-global-control">
             <div class="control-label">
               <i data-lucide="users"></i>
               <span>Global Servings Multiplier:</span>
@@ -214,12 +226,12 @@
           </div>
 
           <!-- Google Keep Export Primary Action Box -->
-          <div class="keep-export-banner glass-panel">
+          <div class="keep-export-banner">
             <div class="keep-header">
               <div class="keep-badge">
                 <i data-lucide="check-square"></i> Google Keep Ready
               </div>
-              <span class="keep-subtitle">Export your shopping checklist to Google Keep</span>
+              <span class="keep-subtitle">Export your ingredient checklist to Google Keep</span>
             </div>
             
             <div class="keep-action-grid">
@@ -252,7 +264,6 @@
           </div>
         </div>
 
-        <!-- Drawer Footer -->
         <div class="drawer-footer">
           <button id="btn-clear-shopping-list" class="btn btn-ghost text-danger">
             <i data-lucide="trash-2"></i> Clear Shopping List
