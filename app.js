@@ -1,20 +1,20 @@
 /**
  * VegePower Application Controller
- * Handles Voting (Thumbs Up / Down), Weekly Email Newsletter Subscription,
- * Instagram Recipe Discovery, and Google Keep Export.
+ * Handles Voting (Thumbs Up / Down), Meat-Free Sanitization,
+ * Weekly Email Newsletter Subscription, Instagram Discovery, and Keep Export.
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Initialize Database
+  // Initialize Database & Purge Non-Vegetarian Items
   await VegeDB.initDB();
-  const dbRecipes = await VegeDB.getAllRecipes();
+  let dbRecipes = await VegeDB.getAllRecipes();
 
   // Load User Votes State
   const userVotes = JSON.parse(localStorage.getItem('vege_user_votes') || '{}');
 
   // Application State
   const AppState = {
-    allRecipes: dbRecipes.length > 0 ? dbRecipes : [...VEGE_RECIPES],
+    allRecipes: dbRecipes,
     selectedRecipeIds: new Set(JSON.parse(localStorage.getItem('vege_selected_recipes') || '[]')),
     activeFilter: 'all',
     searchQuery: '',
@@ -107,12 +107,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       newsletterEmail.value = '';
-
-      // Get top voted recipes summary for email preview digest
-      const topVoted = [...AppState.allRecipes].sort((a,b) => (b.likesCount || 0) - (a.likesCount || 0)).slice(0, 3);
-      const topTitles = topVoted.map(r => `• ${r.title} (${r.proteinGrams}g protein)`).join('\n');
-
-      UIComponents.showToast(`Subscribed ${email}! Weekly Digest email containing our top 3 recipes sent!`, 'success', 5000);
+      UIComponents.showToast(`Subscribed ${email}! Weekly Digest sent!`, 'success', 5000);
     });
   }
 
@@ -123,18 +118,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const recipe = AppState.allRecipes.find(r => r.id === recipeId);
     if (!recipe) return;
 
-    if (!recipe.likesCount) recipe.likesCount = 100;
-    if (!recipe.dislikesCount) recipe.dislikesCount = 2;
+    if (recipe.likesCount === undefined) recipe.likesCount = 120;
+    if (recipe.dislikesCount === undefined) recipe.dislikesCount = 3;
 
     const currentVote = AppState.userVotes[recipeId];
 
     if (currentVote === voteType) {
-      // Toggle off vote
+      // Retract vote
       if (voteType === 'up') recipe.likesCount = Math.max(0, recipe.likesCount - 1);
       if (voteType === 'down') recipe.dislikesCount = Math.max(0, recipe.dislikesCount - 1);
       delete AppState.userVotes[recipeId];
     } else {
-      // Swapping vote
+      // Swapping or casting new vote
       if (currentVote === 'up') recipe.likesCount = Math.max(0, recipe.likesCount - 1);
       if (currentVote === 'down') recipe.dislikesCount = Math.max(0, recipe.dislikesCount - 1);
 
@@ -147,10 +142,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     localStorage.setItem('vege_user_votes', JSON.stringify(AppState.userVotes));
     await VegeDB.saveRecipe(recipe);
 
-    UIComponents.showToast(voteType === 'up' ? 'Voted 👍 Thumbs Up! Thanks for feedback.' : 'Voted 👎 Thumbs Down.', 'success');
+    UIComponents.showToast(voteType === 'up' ? 'Voted 👍 Thumbs Up!' : 'Voted 👎 Thumbs Down.', 'success');
+    
+    // Re-render UI to reflect updated counts
     renderGrid();
 
-    if (AppState.currentDetailRecipeId === recipeId) {
+    if (AppState.currentDetailRecipeId === recipeId && !recipeModal.classList.contains('hidden')) {
       openRecipeDetailModal(recipeId, AppState.detailServingsMultiplier);
     }
   }
@@ -159,7 +156,7 @@ document.addEventListener('DOMContentLoaded', async () => {
      Filtering & Sorting
      ========================================================================== */
   function getFilteredRecipes() {
-    let list = [...AppState.allRecipes];
+    let list = AppState.allRecipes.filter(r => !RecipeApiService.isMeatRecipe(r));
 
     if (AppState.activeFilter !== 'all') {
       if (AppState.activeFilter === 'high-protein') {
@@ -365,7 +362,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnView = e.target.closest('.btn-view-detail') || e.target.closest('.recipe-card');
 
     if (btnVote) {
-      e.stopPropagation();
       const container = btnVote.closest('.voting-container');
       const id = container.dataset.recipeId;
       const voteType = btnVote.dataset.vote;
@@ -374,7 +370,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (btnAdd) {
-      e.stopPropagation();
       const id = btnAdd.dataset.recipeId;
       if (AppState.selectedRecipeIds.has(id)) {
         AppState.selectedRecipeIds.delete(id);
