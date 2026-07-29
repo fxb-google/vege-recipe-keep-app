@@ -1,18 +1,70 @@
 /**
- * VegePower - UI Renderer Components
- * Handles rendering recipe cards, detail view modal, shopping list drawer,
- * and toast notifications.
+ * VegePower - UI Components & Template Generators
+ * Clean metric system display & consolidated retail store pack sizes.
  */
 
 const UIComponents = {
   /**
-   * Render single Recipe Card HTML
+   * Calculate Store Packaging Recommendation for Metric System
    */
-  renderRecipeCard(recipe, isAdded = false) {
+  calculateStorePackage(name, amount, unit) {
+    const lower = name.toLowerCase();
+    
+    // Normalize legacy imperial to metric if present
+    let metricAmt = amount;
+    let metricUnit = unit;
+    if (unit === 'cup') { metricAmt = amount * 150; metricUnit = 'g'; }
+    if (unit === 'oz') { metricAmt = amount * 28; metricUnit = 'g'; }
+    if (unit === 'lb' || unit === 'lbs') { metricAmt = amount * 450; metricUnit = 'g'; }
+
+    // Metric Grams
+    if (metricUnit === 'g') {
+      if (metricAmt >= 1000) {
+        const kg = (metricAmt / 1000).toFixed(1).replace(/\.0$/, '');
+        return { display: `${kg} kg`, storePack: `🛒 Buy ${kg} kg` };
+      }
+      if (lower.includes('tofu') || lower.includes('tempeh') || lower.includes('seitan')) {
+        const packs = Math.max(1, Math.ceil(metricAmt / 250));
+        return { display: `${metricAmt}g`, storePack: `🛒 Buy ${packs}x 250g pack${packs > 1 ? 's' : ''}` };
+      }
+      if (lower.includes('lentil') || lower.includes('quinoa') || lower.includes('rice') || lower.includes('flour') || lower.includes('gluten') || lower.includes('pasta') || lower.includes('oats')) {
+        const bags = Math.max(1, Math.ceil(metricAmt / 500));
+        return { display: `${metricAmt}g`, storePack: `🛒 Buy ${bags}x 500g bag${bags > 1 ? 's' : ''}` };
+      }
+      if (lower.includes('chickpea') || lower.includes('bean') || lower.includes('corn')) {
+        const cans = Math.max(1, Math.ceil(metricAmt / 400));
+        return { display: `${metricAmt}g`, storePack: `🛒 Buy ${cans}x 400g can${cans > 1 ? 's' : ''}` };
+      }
+      return { display: `${metricAmt}g`, storePack: `🛒 Buy ~${metricAmt}g` };
+    }
+
+    // Metric Milliliters
+    if (metricUnit === 'ml') {
+      if (metricAmt >= 1000) {
+        const l = (metricAmt / 1000).toFixed(1).replace(/\.0$/, '');
+        return { display: `${l} L`, storePack: `🛒 Buy ${l} L bottle/carton` };
+      }
+      if (metricAmt <= 250) return { display: `${metricAmt}ml`, storePack: `🛒 Buy 1x 250ml bottle` };
+      if (metricAmt <= 500) return { display: `${metricAmt}ml`, storePack: `🛒 Buy 1x 500ml bottle` };
+      return { display: `${metricAmt}ml`, storePack: `🛒 Buy 1x 1L bottle` };
+    }
+
+    // Cans / Packs / Jars
+    if (metricUnit.includes('can')) {
+      const numCans = Math.max(1, Math.ceil(metricAmt));
+      return { display: `${numCans} cans`, storePack: `🛒 Buy ${numCans}x 400g cans` };
+    }
+
+    return { display: `${metricAmt} ${metricUnit}`, storePack: `🛒 ${metricAmt} ${metricUnit}` };
+  },
+
+  /**
+   * Render Single Recipe Card for Main Grid
+   */
+  renderRecipeCard(recipe, isSelected = false) {
     const sourceClass = recipe.proteinSource || 'tofu';
     const sourceLabel = (recipe.proteinSource || 'tofu').toUpperCase();
-    const onlineBadge = recipe.isOnline ? `<span class="badge badge-secondary" style="background: rgba(6,182,212,0.2); color:#06b6d4;"><i data-lucide="globe" style="width:12px"></i> Online</span>` : '';
-
+    
     return `
       <div class="recipe-card" data-recipe-id="${recipe.id}">
         <div class="card-image-wrapper">
@@ -26,29 +78,25 @@ const UIComponents = {
         <div class="card-body">
           <div class="card-meta">
             <span><i data-lucide="clock" style="width:14px"></i> ${recipe.prepTime}</span>
+            <span>&bull;</span>
             <span><i data-lucide="flame" style="width:14px"></i> ${recipe.calories} kcal</span>
-            ${onlineBadge}
+            <span>&bull;</span>
+            <span><i data-lucide="users" style="width:14px"></i> ${recipe.servings} serv</span>
           </div>
 
           <h3 class="card-title">${recipe.title}</h3>
           <p class="card-description">${recipe.description}</p>
 
           <div class="card-footer">
-            <div class="card-macros">
-              <div class="macro-pill">
-                <span class="macro-val">${recipe.proteinGrams}g</span>
-                <span class="macro-lbl">Protein</span>
-              </div>
-            </div>
-
-            <div class="card-actions">
-              <button class="btn btn-outline btn-sm btn-view-detail" data-recipe-id="${recipe.id}">
-                <i data-lucide="eye" style="width:14px"></i> View
-              </button>
-              <button class="btn-add-cart ${isAdded ? 'added' : ''}" data-recipe-id="${recipe.id}">
-                <i data-lucide="${isAdded ? 'check' : 'plus'}" style="width:14px"></i> ${isAdded ? 'In List' : 'Add'}
-              </button>
-            </div>
+            <button class="btn btn-add-cart ${isSelected ? 'added' : ''}" data-recipe-id="${recipe.id}">
+              <i data-lucide="${isSelected ? 'check' : 'plus'}"></i>
+              <span>${isSelected ? 'Added to List' : 'Add Ingredients'}</span>
+            </button>
+            
+            <button class="btn btn-outline btn-sm btn-view-detail" style="padding: 6px 12px; font-size: 0.8rem;">
+              <span>View Recipe</span>
+              <i data-lucide="chevron-right" style="width:14px"></i>
+            </button>
           </div>
         </div>
       </div>
@@ -56,15 +104,19 @@ const UIComponents = {
   },
 
   /**
-   * Render Recipe Detail Modal Content
+   * Render Detailed View Modal for a Recipe
    */
   renderRecipeDetail(recipe, servingsMultiplier = 1, isAdded = false) {
     const ingredientsHtml = recipe.ingredients.map(ing => {
       const amount = (ing.amount * servingsMultiplier).toFixed(1).replace(/\.0$/, '');
+      const pkg = this.calculateStorePackage(ing.name, ing.amount * servingsMultiplier, ing.unit);
       return `
         <li class="ingredient-item">
           <span>${ing.name}</span>
-          <span class="ingredient-amount">${amount} ${ing.unit}</span>
+          <div style="text-align:right">
+            <div class="ingredient-amount" style="font-weight:700">${amount} ${ing.unit}</div>
+            <div style="font-size:0.75rem; color:var(--text-muted); font-weight:600">${pkg.storePack}</div>
+          </div>
         </li>
       `;
     }).join('');
@@ -109,11 +161,11 @@ const UIComponents = {
         </div>
 
         <div class="ingredients-section-header">
-          <h3>Ingredients</h3>
+          <h3>Ingredients (Metric System)</h3>
           <div class="serving-selector-inline">
             <span>Servings:</span>
             <button class="serving-btn btn-modal-servings-dec" data-recipe-id="${recipe.id}">-</button>
-            <strong style="color:var(--emerald-400)">${recipe.servings * servingsMultiplier}</strong>
+            <strong style="color:var(--forest-900)">${recipe.servings * servingsMultiplier}</strong>
             <button class="serving-btn btn-modal-servings-inc" data-recipe-id="${recipe.id}">+</button>
           </div>
         </div>
@@ -138,7 +190,7 @@ const UIComponents = {
   },
 
   /**
-   * Render Shopping List Aisle Categorized Items
+   * Render Shopping List Aisle Categorized Items with Store Package Consolidation
    */
   renderShoppingAisles(shoppingList, globalMultiplier = 1) {
     if (Object.keys(shoppingList).length === 0 || Object.values(shoppingList).every(arr => arr.length === 0)) {
@@ -146,7 +198,7 @@ const UIComponents = {
         <div class="empty-state" style="padding:40px 10px;">
           <div class="empty-icon"><i data-lucide="shopping-bag"></i></div>
           <h3>Your Shopping List is Empty</h3>
-          <p>Browse recipes and click "Add" to generate your aggregated ingredient checklist for Google Keep.</p>
+          <p>Browse recipes and click "Add" to generate your aggregated metric ingredient checklist for Google Keep.</p>
         </div>
       `;
     }
@@ -166,14 +218,19 @@ const UIComponents = {
 
       const icon = aisleIcons[aisle] || "🛒";
       const itemsHtml = items.map((item, idx) => {
-        const totalAmount = (item.amount * globalMultiplier).toFixed(1).replace(/\.0$/, '');
+        const totalAmount = item.amount * globalMultiplier;
+        const pkg = this.calculateStorePackage(item.name, totalAmount, item.unit);
+
         return `
           <div class="aisle-item ${item.checked ? 'checked' : ''}">
-            <label class="aisle-item-checkbox">
+            <label class="aisle-item-checkbox" style="display:flex; align-items:center; gap:10px; flex:1;">
               <input type="checkbox" data-aisle="${aisle}" data-item-idx="${idx}" ${item.checked ? 'checked' : ''}>
-              <span>${item.name}</span>
+              <div>
+                <div style="font-weight:600">${item.name}</div>
+                <div style="font-size:0.75rem; color:var(--emerald-600); font-weight:700">${pkg.storePack}</div>
+              </div>
             </label>
-            <span style="font-weight:600; color:var(--emerald-400);">${totalAmount} ${item.unit}</span>
+            <span style="font-weight:700; color:var(--text-secondary); font-size:0.88rem;">${pkg.display}</span>
           </div>
         `;
       }).join('');
