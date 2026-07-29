@@ -1,7 +1,7 @@
 /**
  * VegePower - High-Protein Vegetarian & Vegan Recipe Dataset
  * 100% Plant-Based (Seitan, Tofu, Tempeh, Legumes, and Protein Grains).
- * Includes user voting stats (Thumbs Up / Down).
+ * Purely plant-based naming and interactive vote statistics.
  */
 
 const VEGE_RECIPES = [
@@ -81,7 +81,7 @@ const VEGE_RECIPES = [
   },
   {
     id: "recipe-tempeh-blat",
-    title: "Smoky Tempeh Bacon B.L.A.T. Avocado Wrap",
+    title: "Smoky Maple Tempeh & Avocado Wrap",
     proteinSource: "tempeh",
     proteinGrams: 32,
     calories: 490,
@@ -108,12 +108,12 @@ const VEGE_RECIPES = [
       { name: "Sriracha Sauce", amount: 1, unit: "tsp", category: "Pantry" }
     ],
     instructions: [
-      "Thinly slice tempeh block into bacon-like strips.",
+      "Thinly slice tempeh block into strips.",
       "Whisk liquid smoke, maple syrup, soy sauce, and smoked paprika in a shallow bowl.",
       "Marinate tempeh strips for 5 minutes.",
       "Pan-fry in a lightly oiled skillet over medium-high heat for 3-4 minutes each side until caramelized and crispy.",
       "Mix vegan mayo with sriracha and spread over tortillas.",
-      "Layer romaine, sliced tomatoes, avocado, and smoky tempeh bacon. Roll tightly and slice in half."
+      "Layer romaine, sliced tomatoes, avocado, and smoky tempeh. Roll tightly and slice in half."
     ]
   },
   {
@@ -192,7 +192,7 @@ const VEGE_RECIPES = [
   },
   {
     id: "recipe-seitan-steak",
-    title: "Seitan Steak with Garlic Butter & Rosemary",
+    title: "Garlic Herb Pan-Seared Seitan Cutlets",
     proteinSource: "seitan",
     proteinGrams: 48,
     calories: 540,
@@ -204,7 +204,7 @@ const VEGE_RECIPES = [
     likesCount: 156,
     dislikesCount: 8,
     image: "https://images.unsplash.com/photo-1558030006-450675393462?auto=format&fit=crop&w=800&q=80",
-    description: "Rich, savory plant-based steak crafted from vital wheat gluten, black beans, and dark soy sauce, pan-basted with garlic herb butter.",
+    description: "Rich, savory plant-based cutlets crafted from vital wheat gluten, black beans, and dark soy sauce, pan-basted with garlic herb butter.",
     ingredients: [
       { name: "Vital Wheat Gluten", amount: 220, unit: "g", category: "Protein & Chilled" },
       { name: "Canned Black Beans (mashed)", amount: 150, unit: "g", category: "Pantry" },
@@ -219,10 +219,10 @@ const VEGE_RECIPES = [
     ],
     instructions: [
       "Blend black beans, soy sauce, vegetable broth, garlic powder, onion powder, and paprika.",
-      "Mix liquid into vital wheat gluten and knead into two steak shapes.",
-      "Steam steaks in a steamer basket for 20 minutes.",
+      "Mix liquid into vital wheat gluten and knead into two cutlets.",
+      "Steam cutlets in a steamer basket for 20 minutes.",
       "Melt vegan butter in a cast-iron skillet with smashed garlic cloves and rosemary sprigs.",
-      "Sear steaks for 4 minutes per side, spooning hot garlic butter over top repeatedly.",
+      "Sear cutlets for 4 minutes per side, spooning hot garlic butter over top repeatedly.",
       "Rest 2 minutes and serve with roasted veggies or mashed potatoes."
     ]
   },
