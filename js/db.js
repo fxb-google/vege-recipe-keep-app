@@ -1,11 +1,11 @@
 /**
  * VegePower - Database Persistence Layer (IndexedDB Engine)
- * Manages Relational Stores for Recipes, Ingredients, Instructions, and Shopping Lists.
+ * Manages Relational Stores for Recipes, Ingredients, Instructions, Shopping Lists, and Votes.
  */
 
 const VegeDB = {
-  dbName: 'VegePowerDB',
-  dbVersion: 1,
+  dbName: 'VegePowerDB_v2',
+  dbVersion: 2,
   db: null,
 
   /**
@@ -49,8 +49,7 @@ const VegeDB = {
 
       request.onsuccess = async (event) => {
         this.db = event.target.result;
-        // Populate initial default recipes if store is empty
-        await this.seedInitialDataIfEmpty();
+        await this.syncAndSanitizeDatabase();
         resolve(this.db);
       };
 
@@ -62,20 +61,52 @@ const VegeDB = {
   },
 
   /**
-   * Seed initial recipe & ingredient data into IndexedDB if empty
+   * Sync default recipes and purge any non-vegetarian/meat-based items
    */
-  async seedInitialDataIfEmpty() {
+  async syncAndSanitizeDatabase() {
     const existing = await this.getAllRecipes();
-    if (existing.length === 0 && typeof VEGE_RECIPES !== 'undefined') {
-      console.log('Seeding initial recipes & ingredients into IndexedDB database...');
-      for (const recipe of VEGE_RECIPES) {
-        await this.saveRecipe(recipe);
+    const meatRegex = /chorizo|sausage|chicken|beef|pork|mutton|lamb|ham|fish|shrimp|seafood|meat/i;
+
+    // Purge any existing meat or chorizo recipe
+    for (const recipe of existing) {
+      const isMeat = meatRegex.test(recipe.title) || 
+                     meatRegex.test(recipe.description || '') ||
+                     (recipe.ingredients && recipe.ingredients.some(ing => meatRegex.test(ing.name)));
+
+      if (isMeat) {
+        console.log(`Purging non-vegetarian recipe: ${recipe.title}`);
+        await this.deleteRecipe(recipe.id);
+      }
+    }
+
+    // Seed default recipes if dataset missing
+    const refreshed = await this.getAllRecipes();
+    if (typeof VEGE_RECIPES !== 'undefined') {
+      for (const defaultRecipe of VEGE_RECIPES) {
+        const found = refreshed.find(r => r.id === defaultRecipe.id);
+        if (!found) {
+          await this.saveRecipe(defaultRecipe);
+        }
       }
     }
   },
 
   /**
-   * Get all recipes with their joined ingredients and instructions
+   * Delete a recipe and its ingredients/instructions
+   */
+  async deleteRecipe(recipeId) {
+    if (!this.db) return;
+    return new Promise((resolve, reject) => {
+      const tx = this.db.transaction(['recipes'], 'readwrite');
+      const store = tx.objectStore('recipes');
+      const req = store.delete(recipeId);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  },
+
+  /**
+   * Get all recipes with their joined ingredients, instructions, and voting counts
    */
   async getAllRecipes() {
     if (!this.db) await this.initDB();
@@ -98,6 +129,8 @@ const VegeDB = {
 
           fullRecipes.push({
             ...recipe,
+            likesCount: recipe.likesCount !== undefined ? recipe.likesCount : 120,
+            dislikesCount: recipe.dislikesCount !== undefined ? recipe.dislikesCount : 3,
             ingredients,
             instructions: instructions.map(i => i.instructionText)
           });
@@ -111,7 +144,7 @@ const VegeDB = {
   },
 
   /**
-   * Save or Update a Recipe and its relational Ingredients & Instructions
+   * Save or Update a Recipe with likesCount and dislikesCount persistence
    */
   async saveRecipe(recipe) {
     if (!this.db) await this.initDB();
@@ -122,7 +155,7 @@ const VegeDB = {
       const ingStore = tx.objectStore('ingredients');
       const instStore = tx.objectStore('instructions');
 
-      // 1. Put Recipe Record
+      // 1. Put Recipe Record with Vote Counts
       recipeStore.put({
         id: recipe.id,
         title: recipe.title,
@@ -136,6 +169,8 @@ const VegeDB = {
         category: recipe.category,
         image: recipe.image,
         description: recipe.description,
+        likesCount: recipe.likesCount !== undefined ? recipe.likesCount : 120,
+        dislikesCount: recipe.dislikesCount !== undefined ? recipe.dislikesCount : 3,
         isOnline: !!recipe.isOnline
       });
 
@@ -177,39 +212,11 @@ const VegeDB = {
         }
       };
 
-      tx.oncomplete = () => resolve(true);
+      tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });
   },
 
-  /**
-   * Delete Recipe and its relational ingredients/instructions
-   */
-  async deleteRecipe(id) {
-    if (!this.db) await this.initDB();
-
-    return new Promise((resolve, reject) => {
-      const tx = this.db.transaction(['recipes', 'ingredients', 'instructions'], 'readwrite');
-      tx.objectStore('recipes').delete(id);
-
-      // Delete relational ingredients
-      const ingIndex = tx.objectStore('ingredients').index('recipeId');
-      const ingReq = ingIndex.getAllKeys(id);
-      ingReq.onsuccess = () => ingReq.result.forEach(k => tx.objectStore('ingredients').delete(k));
-
-      // Delete relational instructions
-      const instIndex = tx.objectStore('instructions').index('recipeId');
-      const instReq = instIndex.getAllKeys(id);
-      instReq.onsuccess = () => instReq.result.forEach(k => tx.objectStore('instructions').delete(k));
-
-      tx.oncomplete = () => resolve(true);
-      tx.onerror = () => reject(tx.error);
-    });
-  },
-
-  /**
-   * Query ingredients for a specific recipe ID
-   */
   getIngredientsByRecipeId(ingStore, recipeId) {
     return new Promise((resolve) => {
       const index = ingStore.index('recipeId');
@@ -219,28 +226,12 @@ const VegeDB = {
     });
   },
 
-  /**
-   * Query instructions for a specific recipe ID
-   */
   getInstructionsByRecipeId(instStore, recipeId) {
     return new Promise((resolve) => {
       const index = instStore.index('recipeId');
       const req = index.getAll(recipeId);
-      req.onsuccess = () => {
-        const sorted = (req.result || []).sort((a, b) => a.stepNumber - b.stepNumber);
-        resolve(sorted);
-      };
+      req.onsuccess = () => resolve(req.result || []);
       req.onerror = () => resolve([]);
     });
-  },
-
-  /**
-   * Search database for recipes containing a specific ingredient
-   */
-  async searchByIngredientName(ingredientName) {
-    if (!this.db) await this.initDB();
-    const all = await this.getAllRecipes();
-    const term = ingredientName.toLowerCase().trim();
-    return all.filter(r => r.ingredients.some(ing => ing.name.toLowerCase().includes(term)));
   }
 };
