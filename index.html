@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="arcade">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#0e0b16">
-  <meta name="description" content="VegePower 8-Bit Arcade Edition - Fetch high-protein plant recipes with retro video game style and Google Keep checklist export.">
-  <title>VegePower 8-Bit &bull; Retro Plant Recipe Arcade</title>
+  <meta name="description" content="VegePower - High-protein plant recipes with 8-bit Arcade & Pastel Watercolor themes, mouse parallax, and Google Keep checklist export.">
+  <title>VegePower &bull; Plant Recipes & Google Keep Sync</title>
   
-  <!-- 1980s Retro Pixel Art Arcade Fonts -->
+  <!-- Fonts: 1980s Retro Pixel Art & Soft Pastel Watercolor -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=VT323&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Press+Start+2P&family=Silkscreen:wght@400;700&family=VT323&display=swap" rel="stylesheet">
   
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -24,28 +24,35 @@
     <div class="pixel-grid"></div>
     <div class="pixel-glow-orb orb-1"></div>
     <div class="pixel-glow-orb orb-2"></div>
+    <div class="pastel-wash-layer"></div>
   </div>
 
   <div id="app" class="pixel-app-container">
-    <!-- Top Retro Arcade Header -->
+    <!-- Top Header -->
     <header class="site-header pixel-header">
       <div class="header-container">
         <div class="brand">
           <div class="logo-icon pixel-border">
-            <i data-lucide="gamepad-2"></i>
+            <i data-lucide="gamepad-2" id="brand-logo-icon"></i>
           </div>
           <div class="brand-text">
             <div style="display:flex; align-items:center; gap:8px;">
-              <span class="brand-title pixel-text-gold">VEGEPOWER</span>
+              <span class="brand-title pixel-text-gold" id="brand-title-text">VEGEPOWER</span>
               <span id="sync-badge" class="sync-indicator pixel-badge-green">
-                <i data-lucide="refresh-cw" style="width:10px"></i> 8-BIT SYNC
+                <i data-lucide="refresh-cw" style="width:10px"></i> DAILY SYNC
               </span>
             </div>
-            <span class="brand-subtitle pixel-text-cyan">&lt; 1980s ARCADE EDITION &gt;</span>
+            <span class="brand-subtitle pixel-text-cyan" id="brand-sub-text">&lt; 8-BIT / PASTEL EDITION &gt;</span>
           </div>
         </div>
 
         <div class="header-actions">
+          <!-- Style Switcher Button: 8-Bit Arcade vs. Pastel Watercolor -->
+          <button id="btn-style-toggle" class="btn pixel-btn pixel-btn-magenta" title="Toggle Theme: 8-Bit Arcade vs. Soft Pastel Watercolor">
+            <i data-lucide="palette"></i>
+            <span id="style-toggle-label">PASTEL MODE</span>
+          </button>
+
           <!-- Top Header Shopping List Button -->
           <button id="btn-open-cart-header" class="btn pixel-btn pixel-btn-green" title="Consult Shopping List">
             <i data-lucide="shopping-bag"></i>
@@ -58,15 +65,15 @@
             <span class="btn-text">ONLINE</span>
           </button>
           
-          <button id="btn-theme-toggle" class="btn-icon pixel-border" title="Toggle Sound / CRT Theme">
+          <button id="btn-theme-toggle" class="btn-icon pixel-border" title="Toggle Light / Dark Mode">
             <i data-lucide="sun" class="sun-icon"></i>
             <i data-lucide="moon" class="moon-icon"></i>
           </button>
 
           <!-- Top-Right Version Badge -->
-          <div class="app-version-badge pixel-badge-magenta" title="Arcade Engine Version">
+          <div class="app-version-badge pixel-badge-magenta" title="Live CI/CD Deployment Version">
             <span class="version-pulse-dot"></span>
-            <span class="version-text">v2.0-ARCADE</span>
+            <span class="version-text" id="app-version-tag">v2.5-DUAL</span>
           </div>
         </div>
       </div>
@@ -139,9 +146,9 @@
         <!-- Empty State Container -->
         <div id="empty-state" class="empty-state pixel-border-box hidden">
           <div class="empty-icon">
-            <i data-lucide="gamepad-2"></i>
+            <i data-lucide="utensils"></i>
           </div>
-          <h3 class="pixel-text-magenta">GAME OVER: NO RECIPES MATCHED</h3>
+          <h3 class="pixel-text-magenta">NO RECIPES MATCHED</h3>
           <p class="pixel-text-sub">TRY SEARCHING "SEITAN", "TOFU", OR RESET STAGE FILTERS.</p>
           <button id="btn-reset-filters" class="btn pixel-btn pixel-btn-green">
             <i data-lucide="rotate-ccw"></i> RESTART STAGE
