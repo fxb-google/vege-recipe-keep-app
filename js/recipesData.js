@@ -235,7 +235,7 @@ const VEGE_RECIPES = [
       { name: "Turmeric Powder", amount: 0.5, unit: "tsp", category: "Spices" },
       { name: "Olive Oil", amount: 1, unit: "tbsp", category: "Pantry" },
       { name: "Whole Grain Sourdough Bread", amount: 4, unit: "slices", category: "Pantry" },
-      { name: "Cherry Tomatoes", amount: 1, unit: "cup", category: "Produce" }
+      { name: "Cherry Tomatoes", amount: 150, unit: "g", category: "Produce" }
     ],
     instructions: [
       "Crumble firm tofu with hands into egg-like curds.",
@@ -263,7 +263,7 @@ const VEGE_RECIPES = [
       { name: "Black Beans (canned)", amount: 1, unit: "can (400g)", category: "Pantry" },
       { name: "Dry Quinoa", amount: 150, unit: "g", category: "Pantry" },
       { name: "Hemp Hearts / Seeds", amount: 3, unit: "tbsp", category: "Pantry" },
-      { name: "Sweet Corn", amount: 1, unit: "cup", category: "Pantry" },
+      { name: "Sweet Corn", amount: 150, unit: "g", category: "Pantry" },
       { name: "Lime", amount: 2, unit: "whole", category: "Produce" },
       { name: "Cilantro", amount: 1, unit: "bunch", category: "Produce" },
       { name: "Ground Cumin", amount: 1, unit: "tsp", category: "Spices" },
