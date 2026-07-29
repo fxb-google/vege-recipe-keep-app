@@ -1,7 +1,7 @@
 /**
  * VegePower Application Controller
- * Handles Voting (Thumbs Up / Down), Meat-Free Sanitization,
- * Weekly Email Newsletter Subscription, Instagram Discovery, and Keep Export.
+ * Features: Admin Interface, Recipe & Subscriber Email Administration,
+ * Interactive Voting, Instagram Recipe Discovery, and Google Keep Export.
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     userVotes: userVotes
   };
 
-  // DOM Elements
+  // Main UI Elements
   const recipeGrid = document.getElementById('recipe-grid');
   const emptyState = document.getElementById('empty-state');
   const recipeCountBadge = document.getElementById('recipe-count-badge');
@@ -38,6 +38,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Newsletter Form DOM
   const newsletterForm = document.getElementById('newsletter-form');
   const newsletterEmail = document.getElementById('newsletter-email');
+
+  // Admin Interface Elements
+  const btnOpenAdmin = document.getElementById('btn-open-admin');
+  const adminBtnText = document.getElementById('admin-btn-text');
+  const adminLoginModal = document.getElementById('admin-login-modal');
+  const btnCloseAdminLogin = document.getElementById('btn-close-admin-login');
+  const adminLoginForm = document.getElementById('admin-login-form');
+  const adminUsernameInput = document.getElementById('admin-username');
+  const adminPasswordInput = document.getElementById('admin-password');
+  const adminLoginError = document.getElementById('admin-login-error');
+
+  const adminPortalModal = document.getElementById('admin-portal-modal');
+  const btnCloseAdminPortal = document.getElementById('btn-close-admin-portal');
+  const btnAdminLogout = document.getElementById('btn-admin-logout');
+  const adminRecipeCount = document.getElementById('admin-recipe-count');
+  const adminSubCount = document.getElementById('admin-sub-count');
+  const adminRecipeSearch = document.getElementById('admin-recipe-search');
+  const adminRecipesTableContainer = document.getElementById('admin-recipes-table-container');
+  const adminSubscribersTableContainer = document.getElementById('admin-subscribers-table-container');
+  const btnExportSubscribers = document.getElementById('btn-export-subscribers');
 
   // Header & Bottom Bar Cart Buttons
   const btnOpenCartHeader = document.getElementById('btn-open-cart-header');
@@ -60,7 +80,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnExportKeepNew = document.getElementById('btn-export-keep-new');
   const btnCopyChecklist = document.getElementById('btn-copy-checklist');
 
-  // Modal Elements
+  // Recipe Detail Modal
   const recipeModal = document.getElementById('recipe-modal');
   const btnCloseRecipeModal = document.getElementById('btn-close-recipe-modal');
   const recipeModalContent = document.getElementById('recipe-modal-content');
@@ -74,6 +94,174 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnSearchIgApi = document.getElementById('btn-search-ig-api');
   const onlineResultsContainer = document.getElementById('online-results-container');
   const btnThemeToggle = document.getElementById('btn-theme-toggle');
+
+  /* ==========================================================================
+     Admin Portal & Authentication Handlers
+     ========================================================================== */
+  function updateAdminButtonState() {
+    if (AdminService.isAdminLoggedIn()) {
+      if (adminBtnText) adminBtnText.textContent = "Admin Control";
+    } else {
+      if (adminBtnText) adminBtnText.textContent = "Admin Portal";
+    }
+  }
+
+  function openAdminInterface() {
+    if (AdminService.isAdminLoggedIn()) {
+      renderAdminPortal();
+      adminPortalModal.classList.remove('hidden');
+    } else {
+      adminLoginError.classList.add('hidden');
+      adminUsernameInput.value = 'admin';
+      adminPasswordInput.value = '';
+      adminLoginModal.classList.remove('hidden');
+    }
+  }
+
+  btnOpenAdmin.addEventListener('click', openAdminInterface);
+  btnCloseAdminLogin.addEventListener('click', () => adminLoginModal.classList.add('hidden'));
+  btnCloseAdminPortal.addEventListener('click', () => adminPortalModal.classList.add('hidden'));
+
+  adminLoginForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const username = adminUsernameInput.value;
+    const password = adminPasswordInput.value;
+
+    const res = AdminService.authenticate(username, password);
+    if (res.success) {
+      adminLoginModal.classList.add('hidden');
+      updateAdminButtonState();
+      renderAdminPortal();
+      adminPortalModal.classList.remove('hidden');
+      UIComponents.showToast('Admin Authenticated Successfully!', 'success');
+    } else {
+      adminLoginError.textContent = res.error || "Invalid username or password";
+      adminLoginError.classList.remove('hidden');
+    }
+  });
+
+  btnAdminLogout.addEventListener('click', () => {
+    AdminService.logout();
+    updateAdminButtonState();
+    adminPortalModal.classList.add('hidden');
+    UIComponents.showToast('Admin session logged out', 'info');
+  });
+
+  // Admin Portal Tab Navigation
+  document.querySelectorAll('.admin-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const targetTab = btn.dataset.tab;
+      document.getElementById('admin-panel-recipes').classList.toggle('hidden', targetTab !== 'recipes');
+      document.getElementById('admin-panel-subscribers').classList.toggle('hidden', targetTab !== 'subscribers');
+    });
+  });
+
+  function renderAdminPortal() {
+    const subscribers = AdminService.getSubscribers();
+    adminRecipeCount.textContent = AppState.allRecipes.length;
+    adminSubCount.textContent = subscribers.length;
+
+    renderAdminRecipesList();
+    renderAdminSubscribersList();
+  }
+
+  function renderAdminRecipesList() {
+    const query = (adminRecipeSearch.value || '').toLowerCase().trim();
+    let recipes = AppState.allRecipes;
+
+    if (query !== '') {
+      recipes = recipes.filter(r => r.title.toLowerCase().includes(query) || (r.proteinSource || '').toLowerCase().includes(query));
+    }
+
+    if (recipes.length === 0) {
+      adminRecipesTableContainer.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted);">No recipes match search.</div>`;
+      return;
+    }
+
+    adminRecipesTableContainer.innerHTML = recipes.map(r => `
+      <div class="admin-table-row">
+        <img src="${r.image}" class="admin-item-thumb" onerror="this.src='https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80'">
+        <div class="admin-item-info">
+          <div class="admin-item-title">${r.title}</div>
+          <div class="admin-item-meta">${r.proteinGrams}g Protein &bull; ${(r.proteinSource || 'tofu').toUpperCase()} &bull; 👍 ${r.likesCount || 0} Likes</div>
+        </div>
+        <button class="btn-admin-danger btn-delete-recipe-admin" data-recipe-id="${r.id}">
+          <i data-lucide="trash-2" style="width:14px"></i> Delete Recipe
+        </button>
+      </div>
+    `).join('');
+
+    if (window.lucide) lucide.createIcons();
+
+    adminRecipesTableContainer.querySelectorAll('.btn-delete-recipe-admin').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = e.target.closest('.btn-delete-recipe-admin').dataset.recipeId;
+        const recipeToDelete = AppState.allRecipes.find(r => r.id === id);
+
+        if (recipeToDelete && confirm(`Are you sure you want to remove "${recipeToDelete.title}"?`)) {
+          await VegeDB.deleteRecipe(id);
+          AppState.allRecipes = AppState.allRecipes.filter(r => r.id !== id);
+          AppState.selectedRecipeIds.delete(id);
+
+          renderGrid();
+          renderAdminPortal();
+          UIComponents.showToast(`Removed "${recipeToDelete.title}" from recipe list.`, 'info');
+        }
+      });
+    });
+  }
+
+  if (adminRecipeSearch) {
+    adminRecipeSearch.addEventListener('input', renderAdminRecipesList);
+  }
+
+  function renderAdminSubscribersList() {
+    const subscribers = AdminService.getSubscribers();
+    if (subscribers.length === 0) {
+      adminSubscribersTableContainer.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted);">No subscribers registered yet.</div>`;
+      return;
+    }
+
+    adminSubscribersTableContainer.innerHTML = subscribers.map(email => `
+      <div class="admin-table-row">
+        <div class="admin-item-info">
+          <div class="admin-item-title">${email}</div>
+          <div class="admin-item-meta">Status: Active Digest Subscriber</div>
+        </div>
+        <button class="btn-admin-danger btn-delete-sub-admin" data-email="${email}">
+          <i data-lucide="user-x" style="width:14px"></i> Remove Email
+        </button>
+      </div>
+    `).join('');
+
+    if (window.lucide) lucide.createIcons();
+
+    adminSubscribersTableContainer.querySelectorAll('.btn-delete-sub-admin').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const email = e.target.closest('.btn-delete-sub-admin').dataset.email;
+        if (confirm(`Remove ${email} from subscription list?`)) {
+          AdminService.deleteSubscriber(email);
+          renderAdminSubscribersList();
+          adminSubCount.textContent = AdminService.getSubscribers().length;
+          UIComponents.showToast(`Removed ${email} from subscribers.`, 'info');
+        }
+      });
+    });
+  }
+
+  if (btnExportSubscribers) {
+    btnExportSubscribers.addEventListener('click', () => {
+      const ok = AdminService.exportSubscribersCSV();
+      if (ok) {
+        UIComponents.showToast('Exported subscriber emails to CSV file!', 'success');
+      } else {
+        UIComponents.showToast('No subscribers to export.', 'info');
+      }
+    });
+  }
 
   /* ==========================================================================
      Interactive Mouse Parallax on Soft Watercolor Wash Canvas
@@ -100,7 +288,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const email = newsletterEmail.value.trim();
       if (!email) return;
 
-      const subscribers = JSON.parse(localStorage.getItem('vege_newsletter_subscribers') || '[]');
+      const subscribers = AdminService.getSubscribers();
       if (!subscribers.includes(email)) {
         subscribers.push(email);
         localStorage.setItem('vege_newsletter_subscribers', JSON.stringify(subscribers));
@@ -124,12 +312,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const currentVote = AppState.userVotes[recipeId];
 
     if (currentVote === voteType) {
-      // Retract vote
       if (voteType === 'up') recipe.likesCount = Math.max(0, recipe.likesCount - 1);
       if (voteType === 'down') recipe.dislikesCount = Math.max(0, recipe.dislikesCount - 1);
       delete AppState.userVotes[recipeId];
     } else {
-      // Swapping or casting new vote
       if (currentVote === 'up') recipe.likesCount = Math.max(0, recipe.likesCount - 1);
       if (currentVote === 'down') recipe.dislikesCount = Math.max(0, recipe.dislikesCount - 1);
 
@@ -144,7 +330,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     UIComponents.showToast(voteType === 'up' ? 'Voted 👍 Thumbs Up!' : 'Voted 👎 Thumbs Down.', 'success');
     
-    // Re-render UI to reflect updated counts
     renderGrid();
 
     if (AppState.currentDetailRecipeId === recipeId && !recipeModal.classList.contains('hidden')) {
@@ -602,6 +787,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Initial Load & Render
+  // Initial Load & Admin Button Check
+  updateAdminButtonState();
   renderGrid();
 });
