@@ -1,7 +1,7 @@
 /**
  * VegePower - Main Application Controller
- * Features: Light Plant Theme, Daily Auto-Sync & Deduplication Engine,
- * Direct Grid Display, Google Keep Exporter, and Interactive Servings Adjusters.
+ * Features: Metric System Quantities, Consolidated Store Pack Sizes,
+ * Interactive Bottom Bar Shopping List Drawer, and Google Keep Export.
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -37,6 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const proteinPills = document.getElementById('protein-filter-pills');
 
   // Cart & Drawer DOM
+  const mobileBottomBar = document.getElementById('mobile-bottom-bar');
   const cartBadgeCount = document.getElementById('cart-badge-count');
   const cartRecipesCount = document.getElementById('cart-recipes-count');
   const btnOpenCartMobile = document.getElementById('btn-open-cart-mobile');
@@ -204,6 +205,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (window.lucide) lucide.createIcons();
   }
 
+  function openShoppingDrawer() {
+    renderDrawer();
+    shoppingDrawer.classList.remove('hidden');
+  }
+
   /* ==========================================================================
      Google Keep Sync
      ========================================================================== */
@@ -304,7 +310,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const card = e.target.closest('.recipe-card');
       const id = card ? card.dataset.recipeId : null;
       if (id) {
-        AppState.detailServingsMultiplier = 1; // Reset to 1 on fresh click
+        AppState.detailServingsMultiplier = 1;
         openRecipeDetailModal(id, 1);
       }
     }
@@ -358,10 +364,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  btnOpenCartMobile.addEventListener('click', () => {
-    renderDrawer();
-    shoppingDrawer.classList.remove('hidden');
+  // Open Shopping List Drawer on clicking ANY bottom bar element
+  btnOpenCartMobile.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openShoppingDrawer();
   });
+
+  if (mobileBottomBar) {
+    mobileBottomBar.addEventListener('click', (e) => {
+      if (!e.target.closest('#btn-quick-export-keep')) {
+        openShoppingDrawer();
+      }
+    });
+  }
 
   btnCloseDrawer.addEventListener('click', () => shoppingDrawer.classList.add('hidden'));
 
@@ -401,7 +416,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     UIComponents.showToast('Shopping list cleared', 'info');
   });
 
-  btnQuickExportKeep.addEventListener('click', () => handleKeepExport('webshare'));
+  btnQuickExportKeep.addEventListener('click', (e) => {
+    e.stopPropagation();
+    handleKeepExport('webshare');
+  });
+
   btnExportWebshare.addEventListener('click', () => handleKeepExport('webshare'));
   btnExportKeepNew.addEventListener('click', () => handleKeepExport('keep.new'));
   btnCopyChecklist.addEventListener('click', () => handleKeepExport('copy'));
