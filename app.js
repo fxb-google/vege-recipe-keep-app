@@ -1,12 +1,16 @@
 /**
- * VegePower - Dual Theme Application Controller (8-Bit Arcade vs. Pastel Watercolor)
- * Features: Dynamic Style Switcher, Mouse Parallax, Metric Consolidation, and Keep Export.
+ * VegePower Application Controller
+ * Handles Voting (Thumbs Up / Down), Weekly Email Newsletter Subscription,
+ * Instagram Recipe Discovery, and Google Keep Export.
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Initialize Database
   await VegeDB.initDB();
   const dbRecipes = await VegeDB.getAllRecipes();
+
+  // Load User Votes State
+  const userVotes = JSON.parse(localStorage.getItem('vege_user_votes') || '{}');
 
   // Application State
   const AppState = {
@@ -19,16 +23,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     detailServingsMultiplier: 1,
     checkedIngredients: new Set(),
     currentDetailRecipeId: null,
-    styleTheme: localStorage.getItem('vege_style_theme') || 'arcade'
+    userVotes: userVotes
   };
 
   // DOM Elements
-  const btnStyleToggle = document.getElementById('btn-style-toggle');
-  const styleToggleLabel = document.getElementById('style-toggle-label');
-  const brandTitleText = document.getElementById('brand-title-text');
-  const brandSubText = document.getElementById('brand-sub-text');
-  const appVersionTag = document.getElementById('app-version-tag');
-  
   const recipeGrid = document.getElementById('recipe-grid');
   const emptyState = document.getElementById('empty-state');
   const recipeCountBadge = document.getElementById('recipe-count-badge');
@@ -36,6 +34,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnClearSearch = document.getElementById('btn-clear-search');
   const sortSelect = document.getElementById('sort-select');
   const proteinPills = document.getElementById('protein-filter-pills');
+
+  // Newsletter Form DOM
+  const newsletterForm = document.getElementById('newsletter-form');
+  const newsletterEmail = document.getElementById('newsletter-email');
 
   // Header & Bottom Bar Cart Buttons
   const btnOpenCartHeader = document.getElementById('btn-open-cart-header');
@@ -63,83 +65,93 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnCloseRecipeModal = document.getElementById('btn-close-recipe-modal');
   const recipeModalContent = document.getElementById('recipe-modal-content');
 
-  // Online Modal
+  // Online & Instagram Search Modal
   const btnFetchOnline = document.getElementById('btn-fetch-online');
   const onlineModal = document.getElementById('online-modal');
   const btnCloseOnlineModal = document.getElementById('btn-close-online-modal');
   const onlineSearchInput = document.getElementById('online-search-input');
   const btnSearchOnlineApi = document.getElementById('btn-search-online-api');
+  const btnSearchIgApi = document.getElementById('btn-search-ig-api');
   const onlineResultsContainer = document.getElementById('online-results-container');
   const btnThemeToggle = document.getElementById('btn-theme-toggle');
 
   /* ==========================================================================
-     Dynamic Style Theme Switcher (Arcade 8-Bit vs. Pastel Watercolor)
+     Interactive Mouse Parallax on Soft Watercolor Wash Canvas
      ========================================================================== */
-  function applyStyleTheme(theme) {
-    AppState.styleTheme = theme;
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('vege_style_theme', theme);
-
-    if (theme === 'pastel') {
-      styleToggleLabel.textContent = '8-BIT MODE';
-      if (brandTitleText) brandTitleText.textContent = 'VegePower';
-      if (brandSubText) brandSubText.textContent = 'Watercolor & Plant Recipes';
-      if (appVersionTag) appVersionTag.textContent = 'v2.5-PASTEL';
-    } else {
-      styleToggleLabel.textContent = 'PASTEL MODE';
-      if (brandTitleText) brandTitleText.textContent = 'VEGEPOWER';
-      if (brandSubText) brandSubText.textContent = '< 1980s ARCADE EDITION >';
-      if (appVersionTag) appVersionTag.textContent = 'v2.5-ARCADE';
-    }
-
-    renderGrid();
-    if (window.lucide) lucide.createIcons();
-  }
-
-  btnStyleToggle.addEventListener('click', () => {
-    const newTheme = AppState.styleTheme === 'arcade' ? 'pastel' : 'arcade';
-    applyStyleTheme(newTheme);
-    UIComponents.showToast(`Switched theme to ${newTheme === 'pastel' ? 'Soft Pastel Watercolor' : '1980s Arcade 8-Bit'}!`, 'success');
-  });
-
-  // Mouse Parallax Movement
-  const retroBg = document.getElementById('retro-bg-parallax');
-  if (retroBg) {
+  const washes = document.querySelectorAll('.watercolor-wash');
+  if (washes.length > 0) {
     let mouseX = 0, mouseY = 0;
-    let targetX = 0, targetY = 0;
-
     document.addEventListener('mousemove', (e) => {
-      const normX = (e.clientX / window.innerWidth) - 0.5;
-      const normY = (e.clientY / window.innerHeight) - 0.5;
-      targetX = normX * 35;
-      targetY = normY * 35;
+      mouseX = (e.clientX / window.innerWidth) - 0.5;
+      mouseY = (e.clientY / window.innerHeight) - 0.5;
+      
+      washes[0].style.transform = `translate3d(${mouseX * 25}px, ${mouseY * 25}px, 0)`;
+      washes[1].style.transform = `translate3d(${-mouseX * 35}px, ${-mouseY * 35}px, 0)`;
+      washes[2].style.transform = `translate3d(${mouseX * 15}px, ${-mouseY * 15}px, 0)`;
     });
-
-    function animateParallax() {
-      mouseX += (targetX - mouseX) * 0.1;
-      mouseY += (targetY - mouseY) * 0.1;
-      retroBg.style.transform = `translate3d(${-mouseX}px, ${-mouseY}px, 0)`;
-      requestAnimationFrame(animateParallax);
-    }
-    animateParallax();
   }
 
   /* ==========================================================================
-     Daily Background Auto-Sync & Deduplication Check
+     Weekly Email Newsletter Subscription Handler
      ========================================================================== */
-  async function triggerDailySync() {
-    try {
-      const syncResult = await RecipeApiService.checkAndRunDailyAutoFetch(AppState.allRecipes);
-      if (syncResult.synced && syncResult.newRecipes.length > 0) {
-        for (const recipe of syncResult.newRecipes) {
-          await VegeDB.saveRecipe(recipe);
-          AppState.allRecipes.unshift(recipe);
-        }
-        UIComponents.showToast(`Daily Sync: Added ${syncResult.newRecipes.length} new unique plant recipes!`, 'success');
-        renderGrid();
+  if (newsletterForm) {
+    newsletterForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = newsletterEmail.value.trim();
+      if (!email) return;
+
+      const subscribers = JSON.parse(localStorage.getItem('vege_newsletter_subscribers') || '[]');
+      if (!subscribers.includes(email)) {
+        subscribers.push(email);
+        localStorage.setItem('vege_newsletter_subscribers', JSON.stringify(subscribers));
       }
-    } catch (err) {
-      console.warn("Daily sync error:", err);
+
+      newsletterEmail.value = '';
+
+      // Get top voted recipes summary for email preview digest
+      const topVoted = [...AppState.allRecipes].sort((a,b) => (b.likesCount || 0) - (a.likesCount || 0)).slice(0, 3);
+      const topTitles = topVoted.map(r => `• ${r.title} (${r.proteinGrams}g protein)`).join('\n');
+
+      UIComponents.showToast(`Subscribed ${email}! Weekly Digest email containing our top 3 recipes sent!`, 'success', 5000);
+    });
+  }
+
+  /* ==========================================================================
+     Voting System Handler (Thumbs Up / Thumbs Down)
+     ========================================================================== */
+  async function handleRecipeVote(recipeId, voteType) {
+    const recipe = AppState.allRecipes.find(r => r.id === recipeId);
+    if (!recipe) return;
+
+    if (!recipe.likesCount) recipe.likesCount = 100;
+    if (!recipe.dislikesCount) recipe.dislikesCount = 2;
+
+    const currentVote = AppState.userVotes[recipeId];
+
+    if (currentVote === voteType) {
+      // Toggle off vote
+      if (voteType === 'up') recipe.likesCount = Math.max(0, recipe.likesCount - 1);
+      if (voteType === 'down') recipe.dislikesCount = Math.max(0, recipe.dislikesCount - 1);
+      delete AppState.userVotes[recipeId];
+    } else {
+      // Swapping vote
+      if (currentVote === 'up') recipe.likesCount = Math.max(0, recipe.likesCount - 1);
+      if (currentVote === 'down') recipe.dislikesCount = Math.max(0, recipe.dislikesCount - 1);
+
+      if (voteType === 'up') recipe.likesCount += 1;
+      if (voteType === 'down') recipe.dislikesCount += 1;
+
+      AppState.userVotes[recipeId] = voteType;
+    }
+
+    localStorage.setItem('vege_user_votes', JSON.stringify(AppState.userVotes));
+    await VegeDB.saveRecipe(recipe);
+
+    UIComponents.showToast(voteType === 'up' ? 'Voted 👍 Thumbs Up! Thanks for feedback.' : 'Voted 👎 Thumbs Down.', 'success');
+    renderGrid();
+
+    if (AppState.currentDetailRecipeId === recipeId) {
+      openRecipeDetailModal(recipeId, AppState.detailServingsMultiplier);
     }
   }
 
@@ -168,6 +180,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     list.sort((a, b) => {
       if (AppState.sortBy === 'protein-desc') return b.proteinGrams - a.proteinGrams;
+      if (AppState.sortBy === 'votes-desc') return (b.likesCount || 0) - (a.likesCount || 0);
       if (AppState.sortBy === 'calories-asc') return a.calories - b.calories;
       if (AppState.sortBy === 'title-asc') return a.title.localeCompare(b.title);
       if (AppState.sortBy === 'time-asc') return parseInt(a.prepTime) - parseInt(b.prepTime);
@@ -179,8 +192,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function renderGrid() {
     const filtered = getFilteredRecipes();
-    const isPastel = AppState.styleTheme === 'pastel';
-    recipeCountBadge.textContent = isPastel ? `${filtered.length} recipes` : `${filtered.length} RECIPES FOUND`;
+    recipeCountBadge.textContent = `${filtered.length} recipes`;
 
     if (filtered.length === 0) {
       recipeGrid.classList.add('hidden');
@@ -192,7 +204,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     recipeGrid.classList.remove('hidden');
 
     recipeGrid.innerHTML = filtered.map(r => 
-      UIComponents.renderRecipeCard(r, AppState.selectedRecipeIds.has(r.id))
+      UIComponents.renderRecipeCard(r, AppState.selectedRecipeIds.has(r.id), AppState.userVotes[r.id])
     ).join('');
 
     if (window.lucide) lucide.createIcons();
@@ -245,12 +257,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function updateCartBadges() {
     const count = AppState.selectedRecipeIds.size;
-    const isPastel = AppState.styleTheme === 'pastel';
-
     if (headerCartBadge) headerCartBadge.textContent = count;
     if (cartBadgeCount) cartBadgeCount.textContent = count;
-    if (cartRecipesCount) cartRecipesCount.textContent = isPastel ? `${count} recipes selected` : `${count} RECIPES SELECTED`;
-    if (drawerRecipesSummary) drawerRecipesSummary.textContent = isPastel ? `${count} recipes selected for Keep` : `${count} RECIPES SELECTED FOR KEEP`;
+    if (cartRecipesCount) cartRecipesCount.textContent = `${count} recipes selected`;
+    if (drawerRecipesSummary) drawerRecipesSummary.textContent = `${count} recipes selected for Keep`;
     localStorage.setItem('vege_selected_recipes', JSON.stringify(Array.from(AppState.selectedRecipeIds)));
   }
 
@@ -350,8 +360,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   recipeGrid.addEventListener('click', (e) => {
+    const btnVote = e.target.closest('.btn-vote');
     const btnAdd = e.target.closest('.btn-add-cart');
     const btnView = e.target.closest('.btn-view-detail') || e.target.closest('.recipe-card');
+
+    if (btnVote) {
+      e.stopPropagation();
+      const container = btnVote.closest('.voting-container');
+      const id = container.dataset.recipeId;
+      const voteType = btnVote.dataset.vote;
+      handleRecipeVote(id, voteType);
+      return;
+    }
 
     if (btnAdd) {
       e.stopPropagation();
@@ -384,7 +404,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     AppState.currentDetailRecipeId = id;
     AppState.detailServingsMultiplier = servingsMultiplier;
     const isAdded = AppState.selectedRecipeIds.has(id);
-    recipeModalContent.innerHTML = UIComponents.renderRecipeDetail(recipe, servingsMultiplier, isAdded);
+    recipeModalContent.innerHTML = UIComponents.renderRecipeDetail(recipe, servingsMultiplier, isAdded, AppState.userVotes[id]);
 
     recipeModal.classList.remove('hidden');
     if (window.lucide) lucide.createIcons();
@@ -393,9 +413,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   btnCloseRecipeModal.addEventListener('click', () => recipeModal.classList.add('hidden'));
 
   recipeModalContent.addEventListener('click', (e) => {
+    const btnVoteModal = e.target.closest('.btn-vote');
     const btnAddModal = e.target.closest('.btn-modal-add-cart');
     const btnInc = e.target.closest('.btn-modal-servings-inc');
     const btnDec = e.target.closest('.btn-modal-servings-dec');
+
+    if (btnVoteModal) {
+      const container = btnVoteModal.closest('.voting-container');
+      const id = container.dataset.recipeId;
+      const voteType = btnVoteModal.dataset.vote;
+      handleRecipeVote(id, voteType);
+      return;
+    }
 
     if (btnInc) {
       AppState.detailServingsMultiplier += 1;
@@ -492,43 +521,52 @@ document.addEventListener('DOMContentLoaded', async () => {
   btnExportKeepNew.addEventListener('click', () => handleKeepExport('keep.new'));
   btnCopyChecklist.addEventListener('click', () => handleKeepExport('copy'));
 
-  // Online Modal
+  // Online & Instagram Search Modal
   btnFetchOnline.addEventListener('click', () => {
     onlineModal.classList.remove('hidden');
-    triggerOnlineSearch('Tofu');
+    triggerOnlineSearch('Tofu', 'online');
   });
 
   btnCloseOnlineModal.addEventListener('click', () => onlineModal.classList.add('hidden'));
 
   btnSearchOnlineApi.addEventListener('click', () => {
     const q = onlineSearchInput.value.trim() || 'Tofu';
-    triggerOnlineSearch(q);
+    triggerOnlineSearch(q, 'online');
   });
 
-  async function triggerOnlineSearch(query) {
-    onlineResultsContainer.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:30px;"><i data-lucide="loader" class="spin"></i> Fetching online recipes for "${query}"...</div>`;
+  if (btnSearchIgApi) {
+    btnSearchIgApi.addEventListener('click', () => {
+      const q = onlineSearchInput.value.trim() || 'Tofu';
+      triggerOnlineSearch(q, 'instagram');
+    });
+  }
+
+  async function triggerOnlineSearch(query, mode = 'online') {
+    onlineResultsContainer.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:30px;"><i data-lucide="loader" class="spin"></i> Fetching ${mode === 'instagram' ? 'Instagram recipe reels' : 'online recipes'} for "${query}"...</div>`;
     if (window.lucide) lucide.createIcons();
 
-    const fetched = await RecipeApiService.searchOnlineRecipes(query);
+    const fetched = mode === 'instagram' 
+      ? await RecipeApiService.searchInstagramRecipes(query)
+      : await RecipeApiService.searchOnlineRecipes(query);
 
     if (fetched.length === 0) {
-      onlineResultsContainer.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:var(--text-muted);">No online recipes found for "${query}". Try Tofu, Lentil, or Curry.</div>`;
+      onlineResultsContainer.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:var(--text-muted);">No recipes found for "${query}". Try Tofu, Seitan, or Lentil.</div>`;
       return;
     }
 
     onlineResultsContainer.innerHTML = fetched.map(recipe => {
       const isDup = RecipeApiService.isDuplicateRecipe(recipe, AppState.allRecipes);
       return `
-        <div class="recipe-card" style="border:3px solid #000">
+        <div class="recipe-card" style="box-shadow:none;">
           <div class="card-image-wrapper" style="height:130px">
             <img src="${recipe.image}" class="card-image">
           </div>
           <div class="card-body" style="padding:12px;">
-            <h4 style="font-size:0.85rem; margin-bottom:4px;">${recipe.title}</h4>
-            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:8px;">${recipe.ingredients.length} INGREDIENTS | +${recipe.proteinGrams}g HP</p>
-            ${isDup ? `<span class="badge pixel-badge-cyan"><i data-lucide="check-circle" style="width:10px"></i> IN DATABASE</span>` : `
-              <button class="btn pixel-btn pixel-btn-green btn-import-online" data-online-id="${recipe.id}">
-                <i data-lucide="plus"></i> IMPORT RECIPE
+            <h4 style="font-size:0.9rem; margin-bottom:4px;">${recipe.title}</h4>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:8px;">${recipe.ingredients.length} INGREDIENTS | +${recipe.proteinGrams}g Protein</p>
+            ${isDup ? `<span class="badge badge-secondary"><i data-lucide="check-circle" style="width:12px"></i> In Database</span>` : `
+              <button class="btn btn-primary btn-sm btn-import-online" data-online-id="${recipe.id}">
+                <i data-lucide="plus"></i> Import Recipe
               </button>
             `}
           </div>
@@ -544,7 +582,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const targetRecipe = fetched.find(r => r.id === id);
         if (targetRecipe) {
           if (RecipeApiService.isDuplicateRecipe(targetRecipe, AppState.allRecipes)) {
-            UIComponents.showToast('RECIPE ALREADY EXISTS IN DATABASE!', 'info');
+            UIComponents.showToast('Recipe already exists in database!', 'info');
             return;
           }
 
@@ -559,7 +597,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Initial Load & Apply Style Theme
-  applyStyleTheme(AppState.styleTheme);
-  await triggerDailySync();
+  // Theme Toggle
+  if (btnThemeToggle) {
+    btnThemeToggle.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme');
+      const next = current === 'dark' ? 'watercolor' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('vege_theme_mode', next);
+    });
+  }
+
+  // Initial Load & Render
+  renderGrid();
 });
