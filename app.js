@@ -1,7 +1,7 @@
 /**
  * VegePower - Main Application Controller
  * Features: Metric System Quantities, Consolidated Store Pack Sizes,
- * Interactive Bottom Bar Shopping List Drawer, and Google Keep Export.
+ * Interactive Header & Bottom Bar Shopping List Drawer, and Google Keep Export.
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -36,11 +36,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   const sortSelect = document.getElementById('sort-select');
   const proteinPills = document.getElementById('protein-filter-pills');
 
-  // Cart & Drawer DOM
+  // Header & Bottom Bar Cart Buttons
+  const btnOpenCartHeader = document.getElementById('btn-open-cart-header');
+  const headerCartBadge = document.getElementById('header-cart-badge');
   const mobileBottomBar = document.getElementById('mobile-bottom-bar');
   const cartBadgeCount = document.getElementById('cart-badge-count');
   const cartRecipesCount = document.getElementById('cart-recipes-count');
   const btnOpenCartMobile = document.getElementById('btn-open-cart-mobile');
+  
+  // Shopping Drawer DOM
   const shoppingDrawer = document.getElementById('shopping-drawer');
   const btnCloseDrawer = document.getElementById('btn-close-drawer');
   const shoppingListItems = document.getElementById('shopping-list-items');
@@ -187,9 +191,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function updateCartBadges() {
     const count = AppState.selectedRecipeIds.size;
-    cartBadgeCount.textContent = count;
-    cartRecipesCount.textContent = `${count} recipe${count === 1 ? '' : 's'} selected`;
-    drawerRecipesSummary.textContent = `${count} recipe${count === 1 ? '' : 's'} selected for Keep`;
+    if (headerCartBadge) headerCartBadge.textContent = count;
+    if (cartBadgeCount) cartBadgeCount.textContent = count;
+    if (cartRecipesCount) cartRecipesCount.textContent = `${count} recipe${count === 1 ? '' : 's'} selected`;
+    if (drawerRecipesSummary) drawerRecipesSummary.textContent = `${count} recipe${count === 1 ? '' : 's'} selected for Keep`;
     localStorage.setItem('vege_selected_recipes', JSON.stringify(Array.from(AppState.selectedRecipeIds)));
   }
 
@@ -364,11 +369,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Open Shopping List Drawer on clicking ANY bottom bar element
-  btnOpenCartMobile.addEventListener('click', (e) => {
-    e.stopPropagation();
-    openShoppingDrawer();
-  });
+  // Open Shopping List Drawer on Top Header Button OR Mobile Bottom Bar
+  if (btnOpenCartHeader) {
+    btnOpenCartHeader.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openShoppingDrawer();
+    });
+  }
+
+  if (btnOpenCartMobile) {
+    btnOpenCartMobile.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openShoppingDrawer();
+    });
+  }
 
   if (mobileBottomBar) {
     mobileBottomBar.addEventListener('click', (e) => {
