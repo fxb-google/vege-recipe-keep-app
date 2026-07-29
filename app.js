@@ -1,10 +1,34 @@
 /**
- * VegePower - Main Application Controller
- * Features: Metric System Quantities, Consolidated Store Pack Sizes,
- * Interactive Header & Bottom Bar Shopping List Drawer, and Google Keep Export.
+ * VegePower - 1980s Arcade Edition Application Controller
+ * Features: Dynamic Mouse Parallax Background, Retro Pixel Art UI,
+ * Metric System Quantities, Store Pack Consolidation, and Google Keep Export.
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // Initialize Dynamic Mouse Parallax Movement
+  const retroBg = document.getElementById('retro-bg-parallax');
+  if (retroBg) {
+    let mouseX = 0, mouseY = 0;
+    let targetX = 0, targetY = 0;
+
+    document.addEventListener('mousemove', (e) => {
+      // Calculate normalized offset (-1 to 1) from center
+      const normX = (e.clientX / window.innerWidth) - 0.5;
+      const normY = (e.clientY / window.innerHeight) - 0.5;
+      targetX = normX * 35; // 35px parallax shift range
+      targetY = normY * 35;
+    });
+
+    // Smooth RequestAnimationFrame interpolation for fluid 60fps motion
+    function animateParallax() {
+      mouseX += (targetX - mouseX) * 0.1;
+      mouseY += (targetY - mouseY) * 0.1;
+      retroBg.style.transform = `translate3d(${-mouseX}px, ${-mouseY}px, 0)`;
+      requestAnimationFrame(animateParallax);
+    }
+    animateParallax();
+  }
+
   // Initialize Database
   await VegeDB.initDB();
   const dbRecipes = await VegeDB.getAllRecipes();
@@ -20,7 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     detailServingsMultiplier: 1,
     checkedIngredients: new Set(),
     currentDetailRecipeId: null,
-    theme: localStorage.getItem('vege_theme') || 'light'
+    theme: localStorage.getItem('vege_theme') || 'dark'
   };
 
   // Set Theme
@@ -82,7 +106,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           await VegeDB.saveRecipe(recipe);
           AppState.allRecipes.unshift(recipe);
         }
-        UIComponents.showToast(`Daily Sync: Added ${syncResult.newRecipes.length} new unique plant recipes!`, 'success');
+        UIComponents.showToast(`STAGE CLEAR: Added ${syncResult.newRecipes.length} new unique plant recipes!`, 'success');
         renderGrid();
       }
     } catch (err) {
@@ -126,7 +150,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function renderGrid() {
     const filtered = getFilteredRecipes();
-    recipeCountBadge.textContent = `${filtered.length} recipe${filtered.length === 1 ? '' : 's'}`;
+    recipeCountBadge.textContent = `${filtered.length} RECIPE${filtered.length === 1 ? '' : 'S'} FOUND`;
 
     if (filtered.length === 0) {
       recipeGrid.classList.add('hidden');
@@ -193,8 +217,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const count = AppState.selectedRecipeIds.size;
     if (headerCartBadge) headerCartBadge.textContent = count;
     if (cartBadgeCount) cartBadgeCount.textContent = count;
-    if (cartRecipesCount) cartRecipesCount.textContent = `${count} recipe${count === 1 ? '' : 's'} selected`;
-    if (drawerRecipesSummary) drawerRecipesSummary.textContent = `${count} recipe${count === 1 ? '' : 's'} selected for Keep`;
+    if (cartRecipesCount) cartRecipesCount.textContent = `${count} RECIPES SELECTED`;
+    if (drawerRecipesSummary) drawerRecipesSummary.textContent = `${count} RECIPES SELECTED FOR KEEP`;
     localStorage.setItem('vege_selected_recipes', JSON.stringify(Array.from(AppState.selectedRecipeIds)));
   }
 
@@ -221,7 +245,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function handleKeepExport(method = 'webshare') {
     const { aisleMap, selectedRecipes } = getAggregatedShoppingList();
     if (selectedRecipes.length === 0) {
-      UIComponents.showToast('Please select at least 1 recipe first!', 'info');
+      UIComponents.showToast('SELECT AT LEAST 1 RECIPE FIRST!', 'info');
       return;
     }
 
@@ -237,9 +261,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         formattedList
       );
       if (res.success) {
-        UIComponents.showToast('Opened Web Share target! Select Google Keep.', 'success');
+        UIComponents.showToast('TARGET LOCKED: Select Google Keep!', 'success');
       } else if (res.method === 'keep.new') {
-        UIComponents.showToast('Copied list to clipboard & opened keep.new!', 'success');
+        UIComponents.showToast('Copied list & opened keep.new!', 'success');
       }
     } else if (method === 'keep.new') {
       KeepExporterService.openKeepNew(formattedList);
@@ -247,7 +271,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else if (method === 'copy') {
       const ok = await KeepExporterService.copyToClipboard(formattedList);
       if (ok) {
-        UIComponents.showToast('Copied Google Keep checklist to clipboard!', 'success');
+        UIComponents.showToast('Copied Google Keep checklist!', 'success');
       }
     }
   }
@@ -302,10 +326,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       const id = btnAdd.dataset.recipeId;
       if (AppState.selectedRecipeIds.has(id)) {
         AppState.selectedRecipeIds.delete(id);
-        UIComponents.showToast('Removed from shopping list', 'info');
+        UIComponents.showToast('REMOVED FROM INVENTORY', 'info');
       } else {
         AppState.selectedRecipeIds.add(id);
-        UIComponents.showToast('Added ingredients to shopping list!', 'success');
+        UIComponents.showToast('ADDED TO INVENTORY!', 'success');
       }
       renderGrid();
       return;
@@ -362,7 +386,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         AppState.selectedRecipeIds.delete(id);
       } else {
         AppState.selectedRecipeIds.add(id);
-        UIComponents.showToast('Added to shopping list!', 'success');
+        UIComponents.showToast('ADDED TO INVENTORY!', 'success');
       }
       openRecipeDetailModal(id, AppState.detailServingsMultiplier);
       renderGrid();
@@ -427,7 +451,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     AppState.checkedIngredients.clear();
     renderGrid();
     renderDrawer();
-    UIComponents.showToast('Shopping list cleared', 'info');
+    UIComponents.showToast('INVENTORY CLEARED', 'info');
   });
 
   btnQuickExportKeep.addEventListener('click', (e) => {
@@ -453,29 +477,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   async function triggerOnlineSearch(query) {
-    onlineResultsContainer.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:30px;"><i data-lucide="loader" class="spin"></i> Fetching online recipes for "${query}"...</div>`;
+    onlineResultsContainer.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:30px;" class="pixel-text-gold"><i data-lucide="loader" class="spin"></i> FETCHING ONLINE DATA FOR "${query.toUpperCase()}"...</div>`;
     if (window.lucide) lucide.createIcons();
 
     const fetched = await RecipeApiService.searchOnlineRecipes(query);
 
     if (fetched.length === 0) {
-      onlineResultsContainer.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:var(--text-muted);">No online recipes found for "${query}". Try searching for Tofu, Lentil, or Curry.</div>`;
+      onlineResultsContainer.innerHTML = `<div style="grid-column:1/-1; text-align:center;" class="pixel-text-sub">NO ONLINE RECIPES FOUND FOR "${query.toUpperCase()}". TRY TOFU, LENTIL, OR CURRY.</div>`;
       return;
     }
 
     onlineResultsContainer.innerHTML = fetched.map(recipe => {
       const isDup = RecipeApiService.isDuplicateRecipe(recipe, AppState.allRecipes);
       return `
-        <div class="recipe-card" style="border:1px solid var(--border-glass)">
-          <div class="card-image-wrapper" style="height:140px">
+        <div class="recipe-card" style="border:3px solid #000">
+          <div class="card-image-wrapper" style="height:130px">
             <img src="${recipe.image}" class="card-image">
           </div>
-          <div class="card-body" style="padding:14px;">
-            <h4 style="font-size:0.92rem; margin-bottom:4px;">${recipe.title}</h4>
-            <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:10px;">${recipe.ingredients.length} ingredients | ${recipe.proteinGrams}g protein</p>
-            ${isDup ? `<span class="badge badge-secondary" style="color:var(--text-muted)"><i data-lucide="check-circle" style="width:12px"></i> In Database</span>` : `
-              <button class="btn btn-primary btn-sm btn-import-online" data-online-id="${recipe.id}">
-                <i data-lucide="plus"></i> Import Recipe
+          <div class="card-body" style="padding:12px;">
+            <h4 style="font-family:var(--font-pixel); font-size:0.75rem; margin-bottom:4px; color:#fff;">${recipe.title}</h4>
+            <p class="pixel-text-sub" style="font-size:0.9rem; margin-bottom:8px;">${recipe.ingredients.length} INGREDIENTS | +${recipe.proteinGrams}g HP</p>
+            ${isDup ? `<span class="badge pixel-badge-cyan"><i data-lucide="check-circle" style="width:10px"></i> IN DATABASE</span>` : `
+              <button class="btn pixel-btn pixel-btn-green btn-import-online" data-online-id="${recipe.id}" style="font-size:0.6rem; padding:6px 10px;">
+                <i data-lucide="plus"></i> IMPORT RECIPE
               </button>
             `}
           </div>
@@ -491,7 +515,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const targetRecipe = fetched.find(r => r.id === id);
         if (targetRecipe) {
           if (RecipeApiService.isDuplicateRecipe(targetRecipe, AppState.allRecipes)) {
-            UIComponents.showToast('Recipe already exists in database!', 'info');
+            UIComponents.showToast('RECIPE ALREADY EXISTS IN DATABASE!', 'info');
             return;
           }
 
@@ -500,7 +524,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           AppState.selectedRecipeIds.add(targetRecipe.id);
           onlineModal.classList.add('hidden');
           renderGrid();
-          UIComponents.showToast(`Saved "${targetRecipe.title}" to Database & Shopping List!`, 'success');
+          UIComponents.showToast(`SAVED "${targetRecipe.title.toUpperCase()}" TO INVENTORY!`, 'success');
         }
       });
     });
