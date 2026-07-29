@@ -1,7 +1,7 @@
 /**
  * VegePower - Main Application Controller
  * Features: Light Plant Theme, Daily Auto-Sync & Deduplication Engine,
- * Direct Grid Display (No Infinite Scroll), and Google Keep Exporter.
+ * Direct Grid Display, Google Keep Exporter, and Interactive Servings Adjusters.
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     searchQuery: '',
     sortBy: 'protein-desc',
     globalMultiplier: 2,
+    detailServingsMultiplier: 1,
     checkedIngredients: new Set(),
     currentDetailRecipeId: null,
     theme: localStorage.getItem('vege_theme') || 'light'
@@ -85,7 +86,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /* ==========================================================================
-     Filtering & Sorting (Direct Grid Rendering - No Pagination)
+     Filtering & Sorting
      ========================================================================== */
   function getFilteredRecipes() {
     let list = [...AppState.allRecipes];
@@ -131,7 +132,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     emptyState.classList.add('hidden');
     recipeGrid.classList.remove('hidden');
 
-    // Render all matching recipes at once into the grid
     recipeGrid.innerHTML = filtered.map(r => 
       UIComponents.renderRecipeCard(r, AppState.selectedRecipeIds.has(r.id))
     ).join('');
@@ -303,17 +303,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (btnView) {
       const card = e.target.closest('.recipe-card');
       const id = card ? card.dataset.recipeId : null;
-      if (id) openRecipeDetailModal(id);
+      if (id) {
+        AppState.detailServingsMultiplier = 1; // Reset to 1 on fresh click
+        openRecipeDetailModal(id, 1);
+      }
     }
   });
 
-  function openRecipeDetailModal(id) {
+  function openRecipeDetailModal(id, servingsMultiplier = 1) {
     const recipe = AppState.allRecipes.find(r => r.id === id);
     if (!recipe) return;
 
     AppState.currentDetailRecipeId = id;
+    AppState.detailServingsMultiplier = servingsMultiplier;
     const isAdded = AppState.selectedRecipeIds.has(id);
-    recipeModalContent.innerHTML = UIComponents.renderRecipeDetail(recipe, 1, isAdded);
+    recipeModalContent.innerHTML = UIComponents.renderRecipeDetail(recipe, servingsMultiplier, isAdded);
 
     recipeModal.classList.remove('hidden');
     if (window.lucide) lucide.createIcons();
@@ -321,8 +325,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   btnCloseRecipeModal.addEventListener('click', () => recipeModal.classList.add('hidden'));
 
+  // Recipe Detail Modal Servings Increase / Decrease & Cart Action
   recipeModalContent.addEventListener('click', (e) => {
     const btnAddModal = e.target.closest('.btn-modal-add-cart');
+    const btnInc = e.target.closest('.btn-modal-servings-inc');
+    const btnDec = e.target.closest('.btn-modal-servings-dec');
+
+    if (btnInc) {
+      AppState.detailServingsMultiplier += 1;
+      openRecipeDetailModal(AppState.currentDetailRecipeId, AppState.detailServingsMultiplier);
+      return;
+    }
+
+    if (btnDec) {
+      if (AppState.detailServingsMultiplier > 1) {
+        AppState.detailServingsMultiplier -= 1;
+        openRecipeDetailModal(AppState.currentDetailRecipeId, AppState.detailServingsMultiplier);
+      }
+      return;
+    }
+
     if (btnAddModal) {
       const id = AppState.currentDetailRecipeId;
       if (AppState.selectedRecipeIds.has(id)) {
@@ -331,7 +353,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         AppState.selectedRecipeIds.add(id);
         UIComponents.showToast('Added to shopping list!', 'success');
       }
-      openRecipeDetailModal(id);
+      openRecipeDetailModal(id, AppState.detailServingsMultiplier);
       renderGrid();
     }
   });
@@ -343,11 +365,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   btnCloseDrawer.addEventListener('click', () => shoppingDrawer.classList.add('hidden'));
 
-  document.querySelectorAll('.multiplier-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      AppState.globalMultiplier = parseInt(e.target.dataset.multiplier);
+  // Event Delegation for Servings Multiplier Buttons in Shopping Drawer
+  shoppingDrawer.addEventListener('click', (e) => {
+    const multBtn = e.target.closest('.multiplier-btn');
+    if (multBtn) {
+      AppState.globalMultiplier = parseInt(multBtn.dataset.multiplier);
       renderDrawer();
-    });
+    }
   });
 
   shoppingListItems.addEventListener('change', (e) => {
