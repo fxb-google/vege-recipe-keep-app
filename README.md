@@ -20,3 +20,4 @@ A modern, mobile-adaptable web application to explore plant-protein recipes (**S
 - HTML5, CSS3 (Glassmorphism, Obsidian Dark Theme, Touch Mobile UI), ES6 Modules.
 - IndexedDB + SQLite database persistence.
 - Docker & GCP Cloud Run / Firebase deployment configs.
+# vege-recipe-keep-app
