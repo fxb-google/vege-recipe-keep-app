@@ -1,6 +1,7 @@
 /**
  * VegePower - High-Protein Vegetarian & Vegan Recipe Dataset
- * Highlighting Seitan, Tofu, Tempeh, Legumes, and Protein Grains.
+ * 100% Plant-Based (Seitan, Tofu, Tempeh, Legumes, and Protein Grains).
+ * Includes user voting stats (Thumbs Up / Down).
  */
 
 const VEGE_RECIPES = [
@@ -15,6 +16,8 @@ const VEGE_RECIPES = [
     servings: 2,
     difficulty: "Medium",
     category: "High Protein Dinner",
+    likesCount: 142,
+    dislikesCount: 4,
     image: "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80",
     description: "Tender homemade seitan strips marinated in lemongrass, turmeric, and garlic, grilled to perfection with a rich creamy peanut dipping sauce.",
     ingredients: [
@@ -36,7 +39,7 @@ const VEGE_RECIPES = [
       "Add vegetable broth and 1 tbsp soy sauce. Knead for 3 minutes to develop gluten structure.",
       "Cut seitan into strips and steam for 15 minutes until firm.",
       "Whisk peanut butter, coconut milk, lime juice, maple syrup, remaining soy sauce, minced garlic and ginger.",
-      "Thread seitan strips onto skewers and grill or pan-sear for 3-4 minutes per side until charred.",
+      "Thread seitan strips onto skewers and pan-sear or grill for 3-4 minutes per side until charred.",
       "Serve warm drizzled with peanut dip and fresh cilantro."
     ]
   },
@@ -51,6 +54,8 @@ const VEGE_RECIPES = [
     servings: 2,
     difficulty: "Easy",
     category: "Quick Lunch",
+    likesCount: 189,
+    dislikesCount: 6,
     image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80",
     description: "Golden air-fried extra firm tofu tossed in sweet teriyaki glaze over warm quinoa, steamed edamame, purple cabbage, and creamy avocado.",
     ingredients: [
@@ -59,7 +64,7 @@ const VEGE_RECIPES = [
       { name: "Cornstarch", amount: 2, unit: "tbsp", category: "Pantry" },
       { name: "Cooked Quinoa", amount: 250, unit: "g", category: "Pantry" },
       { name: "Teriyaki Sauce", amount: 4, unit: "tbsp", category: "Pantry" },
-      { name: "Shredded Purple Cabbage", amount: 1, unit: "cup", category: "Produce" },
+      { name: "Shredded Purple Cabbage", amount: 100, unit: "g", category: "Produce" },
       { name: "Ripe Avocado", amount: 1, unit: "whole", category: "Produce" },
       { name: "Sesame Oil", amount: 1, unit: "tbsp", category: "Pantry" },
       { name: "Toasted Sesame Seeds", amount: 1, unit: "tbsp", category: "Spices" },
@@ -68,7 +73,7 @@ const VEGE_RECIPES = [
     instructions: [
       "Press extra firm tofu with paper towels for 10 minutes to remove excess moisture. Cube into bite-sized pieces.",
       "Toss tofu cubes in cornstarch and sesame oil until evenly coated.",
-      "Bake or air-fry at 200°C (400°F) for 15 minutes until crispy and golden.",
+      "Bake or air-fry at 200°C for 15 minutes until crispy and golden.",
       "In a small skillet, warm teriyaki sauce and toss crispy tofu until glazed.",
       "Assemble bowls: quinoa base, glazed tofu, edamame, purple cabbage, and sliced avocado.",
       "Garnish with green onions and sesame seeds."
@@ -85,6 +90,8 @@ const VEGE_RECIPES = [
     servings: 2,
     difficulty: "Easy",
     category: "Lunch / On The Go",
+    likesCount: 112,
+    dislikesCount: 3,
     image: "https://images.unsplash.com/photo-1509722747041-616f39b57569?auto=format&fit=crop&w=800&q=80",
     description: "Smoky maple-marinated tempeh strips pan-fried crisp, wrapped in whole grain tortillas with crisp romaine, ripe tomatoes, avocado, and spicy sriracha mayo.",
     ingredients: [
@@ -120,6 +127,8 @@ const VEGE_RECIPES = [
     servings: 3,
     difficulty: "Easy",
     category: "Comfort Food",
+    likesCount: 204,
+    dislikesCount: 5,
     image: "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=800&q=80",
     description: "Rich, fragrant Indian-inspired chickpea curry simmered in coconut milk, fire-roasted tomatoes, fresh baby spinach, and Garam Masala spices.",
     ingredients: [
@@ -155,6 +164,8 @@ const VEGE_RECIPES = [
     servings: 4,
     difficulty: "Easy",
     category: "Pasta",
+    likesCount: 165,
+    dislikesCount: 2,
     image: "https://images.unsplash.com/photo-1621996346565-e3d5d6281318?auto=format&fit=crop&w=800&q=80",
     description: "Hearty Italian-style sauce packed with brown lentils, crushed walnuts, tomato passata, garlic, and fresh basil over high-protein lentil pasta.",
     ingredients: [
@@ -190,6 +201,8 @@ const VEGE_RECIPES = [
     servings: 2,
     difficulty: "Advanced",
     category: "Gourmet Dinner",
+    likesCount: 156,
+    dislikesCount: 8,
     image: "https://images.unsplash.com/photo-1558030006-450675393462?auto=format&fit=crop&w=800&q=80",
     description: "Rich, savory plant-based steak crafted from vital wheat gluten, black beans, and dark soy sauce, pan-basted with garlic herb butter.",
     ingredients: [
@@ -224,6 +237,8 @@ const VEGE_RECIPES = [
     servings: 2,
     difficulty: "Easy",
     category: "Breakfast / Brunch",
+    likesCount: 178,
+    dislikesCount: 3,
     image: "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=800&q=80",
     description: "Fluffy savory tofu scramble seasoned with black salt (Kala Namak) for egg flavor, turmeric, sautéed cremini mushrooms, and fresh baby spinach.",
     ingredients: [
@@ -257,6 +272,8 @@ const VEGE_RECIPES = [
     servings: 2,
     difficulty: "Easy",
     category: "Power Lunch",
+    likesCount: 134,
+    dislikesCount: 4,
     image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80",
     description: "Nutrient-packed bowl featuring fluffy quinoa, seasoned black beans, sweet corn, hemp seeds, fresh salsa, and lime cilantro dressing.",
     ingredients: [
