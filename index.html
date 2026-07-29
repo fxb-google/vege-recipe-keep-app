@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#faf8f5">
-  <meta name="description" content="Fetch high-protein plant recipes (seitan, tofu, tempeh, legumes) with daily deduplication sync and Google Keep checklist export.">
-  <title>VegePower &bull; Plant Recipes & Google Keep Sync</title>
+  <meta name="theme-color" content="#0e0b16">
+  <meta name="description" content="VegePower 8-Bit Arcade Edition - Fetch high-protein plant recipes with retro video game style and Google Keep checklist export.">
+  <title>VegePower 8-Bit &bull; Retro Plant Recipe Arcade</title>
   
-  <!-- Google Fonts -->
+  <!-- 1980s Retro Pixel Art Arcade Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=VT323&display=swap" rel="stylesheet">
   
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -18,56 +18,64 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div id="app">
-    <!-- Top Header -->
-    <header class="site-header">
+  <!-- Dynamic Mouse Parallax Background Layers -->
+  <div id="retro-bg-parallax" class="retro-bg-parallax">
+    <div class="pixel-stars"></div>
+    <div class="pixel-grid"></div>
+    <div class="pixel-glow-orb orb-1"></div>
+    <div class="pixel-glow-orb orb-2"></div>
+  </div>
+
+  <div id="app" class="pixel-app-container">
+    <!-- Top Retro Arcade Header -->
+    <header class="site-header pixel-header">
       <div class="header-container">
         <div class="brand">
-          <div class="logo-icon">
-            <i data-lucide="leaf"></i>
+          <div class="logo-icon pixel-border">
+            <i data-lucide="gamepad-2"></i>
           </div>
           <div class="brand-text">
             <div style="display:flex; align-items:center; gap:8px;">
-              <span class="brand-title">VegePower</span>
-              <span id="sync-badge" class="sync-indicator">
-                <i data-lucide="refresh-cw" style="width:12px"></i> Daily Sync
+              <span class="brand-title pixel-text-gold">VEGEPOWER</span>
+              <span id="sync-badge" class="sync-indicator pixel-badge-green">
+                <i data-lucide="refresh-cw" style="width:10px"></i> 8-BIT SYNC
               </span>
             </div>
-            <span class="brand-subtitle">Plant Protein & Keep Sync</span>
+            <span class="brand-subtitle pixel-text-cyan">&lt; 1980s ARCADE EDITION &gt;</span>
           </div>
         </div>
 
         <div class="header-actions">
-          <!-- Prominent Top Header Shopping List Button for Desktop & Mobile -->
-          <button id="btn-open-cart-header" class="btn btn-cart-header" title="Consult Shopping List">
+          <!-- Top Header Shopping List Button -->
+          <button id="btn-open-cart-header" class="btn pixel-btn pixel-btn-green" title="Consult Shopping List">
             <i data-lucide="shopping-bag"></i>
-            <span class="btn-text">Shopping List</span>
+            <span class="btn-text">ITEMS</span>
             <span id="header-cart-badge" class="header-cart-badge">0</span>
           </button>
 
-          <button id="btn-fetch-online" class="btn btn-outline btn-sm" title="Search Online Recipes">
+          <button id="btn-fetch-online" class="btn pixel-btn pixel-btn-yellow" title="Search Online Recipes">
             <i data-lucide="globe"></i>
-            <span class="btn-text">Search Online</span>
+            <span class="btn-text">ONLINE</span>
           </button>
           
-          <button id="btn-theme-toggle" class="btn-icon" title="Toggle Theme">
+          <button id="btn-theme-toggle" class="btn-icon pixel-border" title="Toggle Sound / CRT Theme">
             <i data-lucide="sun" class="sun-icon"></i>
             <i data-lucide="moon" class="moon-icon"></i>
           </button>
 
           <!-- Top-Right Version Badge -->
-          <div class="app-version-badge" title="Live CI/CD Deployment Version">
+          <div class="app-version-badge pixel-badge-magenta" title="Arcade Engine Version">
             <span class="version-pulse-dot"></span>
-            <span class="version-text">v1.4.1</span>
+            <span class="version-text">v2.0-ARCADE</span>
           </div>
         </div>
       </div>
 
       <!-- Search & Filters Container -->
       <div class="search-filter-section">
-        <div class="search-bar-container">
+        <div class="search-bar-container pixel-border-sm">
           <i data-lucide="search" class="search-icon"></i>
-          <input type="text" id="search-input" placeholder="Search seitan, tofu, ingredients, power bowls..." autocomplete="off">
+          <input type="text" id="search-input" placeholder="SEARCH SEITAN, TOFU, TEMPEH, POWER FOODS..." autocomplete="off">
           <button id="btn-clear-search" class="btn-clear hidden">
             <i data-lucide="x"></i>
           </button>
@@ -76,26 +84,26 @@
         <!-- Filter Pills Bar -->
         <div class="filter-pills-wrapper">
           <div class="filter-pills" id="protein-filter-pills">
-            <button class="pill active" data-filter="all">
-              <i data-lucide="sparkles"></i> All Power Foods
+            <button class="pill active pixel-pill" data-filter="all">
+              <i data-lucide="sparkles"></i> ALL POWER
             </button>
-            <button class="pill" data-filter="seitan">
-              <span class="pill-dot seitan"></span> Seitan
+            <button class="pill pixel-pill" data-filter="seitan">
+              <span class="pill-dot seitan"></span> SEITAN
             </button>
-            <button class="pill" data-filter="tofu">
-              <span class="pill-dot tofu"></span> Tofu
+            <button class="pill pixel-pill" data-filter="tofu">
+              <span class="pill-dot tofu"></span> TOFU
             </button>
-            <button class="pill" data-filter="tempeh">
-              <span class="pill-dot tempeh"></span> Tempeh
+            <button class="pill pixel-pill" data-filter="tempeh">
+              <span class="pill-dot tempeh"></span> TEMPEH
             </button>
-            <button class="pill" data-filter="legumes">
-              <span class="pill-dot legumes"></span> Legumes & Beans
+            <button class="pill pixel-pill" data-filter="legumes">
+              <span class="pill-dot legumes"></span> LEGUMES
             </button>
-            <button class="pill" data-filter="grains">
-              <span class="pill-dot grains"></span> Grains & Seeds
+            <button class="pill pixel-pill" data-filter="grains">
+              <span class="pill-dot grains"></span> GRAINS
             </button>
-            <button class="pill pill-high-protein" data-filter="high-protein">
-              <i data-lucide="zap"></i> 30g+ Protein
+            <button class="pill pill-high-protein pixel-pill" data-filter="high-protein">
+              <i data-lucide="zap"></i> 30g+ HIGH HP
             </button>
           </div>
         </div>
@@ -105,20 +113,20 @@
     <!-- Main Content Area -->
     <main class="main-content">
       <div class="container">
-        <!-- Filter Header -->
-        <div class="results-header">
+        <!-- Scoreboard Filter Header -->
+        <div class="results-header pixel-border-box">
           <div class="results-info">
-            <h2 id="section-title">Plant-Protein Recipes</h2>
-            <span id="recipe-count-badge" class="badge badge-secondary">0 recipes</span>
+            <h2 id="section-title" class="pixel-heading">STAGE 1: PLANT RECIPES</h2>
+            <span id="recipe-count-badge" class="badge pixel-badge-cyan">0 RECIPES FOUND</span>
           </div>
 
           <div class="sort-wrapper">
-            <label for="sort-select"><i data-lucide="arrow-up-down"></i> Sort:</label>
-            <select id="sort-select" class="glass-select">
-              <option value="protein-desc">Highest Protein</option>
-              <option value="time-asc">Quickest Prep</option>
-              <option value="title-asc">Name (A-Z)</option>
-              <option value="calories-asc">Lowest Calories</option>
+            <label for="sort-select" class="pixel-text-yellow"><i data-lucide="arrow-up-down"></i> SORT BY:</label>
+            <select id="sort-select" class="pixel-select">
+              <option value="protein-desc">HIGHEST PROTEIN (HP)</option>
+              <option value="time-asc">FASTEST PREP</option>
+              <option value="title-asc">NAME (A-Z)</option>
+              <option value="calories-asc">LOWEST CALORIES</option>
             </select>
           </div>
         </div>
@@ -129,42 +137,42 @@
         </div>
 
         <!-- Empty State Container -->
-        <div id="empty-state" class="empty-state hidden">
+        <div id="empty-state" class="empty-state pixel-border-box hidden">
           <div class="empty-icon">
-            <i data-lucide="utensils-crossed"></i>
+            <i data-lucide="gamepad-2"></i>
           </div>
-          <h3>No matching recipes found</h3>
-          <p>Try searching for "seitan", "tofu", "curry" or change your protein filter.</p>
-          <button id="btn-reset-filters" class="btn btn-primary">
-            <i data-lucide="rotate-ccw"></i> Reset Filters
+          <h3 class="pixel-text-magenta">GAME OVER: NO RECIPES MATCHED</h3>
+          <p class="pixel-text-sub">TRY SEARCHING "SEITAN", "TOFU", OR RESET STAGE FILTERS.</p>
+          <button id="btn-reset-filters" class="btn pixel-btn pixel-btn-green">
+            <i data-lucide="rotate-ccw"></i> RESTART STAGE
           </button>
         </div>
       </div>
     </main>
 
-    <!-- Mobile Floating Bottom Bar -->
-    <div class="mobile-bottom-bar" id="mobile-bottom-bar">
+    <!-- Mobile Floating Retro Bottom Bar -->
+    <div class="mobile-bottom-bar pixel-header" id="mobile-bottom-bar">
       <button id="btn-open-cart-mobile" class="btn-cart-summary">
-        <div class="cart-icon-wrapper">
+        <div class="cart-icon-wrapper pixel-border-sm">
           <i data-lucide="shopping-bag"></i>
-          <span id="cart-badge-count" class="cart-badge">0</span>
+          <span id="cart-badge-count" class="cart-badge pixel-badge-magenta">0</span>
         </div>
         <div class="cart-info">
-          <span class="cart-label">Shopping List</span>
-          <span id="cart-recipes-count" class="cart-subtext">0 recipes selected</span>
+          <span class="cart-label pixel-text-gold">INVENTORY</span>
+          <span id="cart-recipes-count" class="cart-subtext pixel-text-cyan">0 RECIPES SELECTED</span>
         </div>
       </button>
 
-      <button id="btn-quick-export-keep" class="btn btn-keep-accent">
+      <button id="btn-quick-export-keep" class="btn pixel-btn pixel-btn-magenta">
         <i data-lucide="external-link"></i>
-        <span>Keep Sync</span>
+        <span>KEEP SYNC [A]</span>
       </button>
     </div>
 
     <!-- Recipe Detail Modal -->
     <div id="recipe-modal" class="modal-backdrop hidden">
-      <div class="modal-card">
-        <button class="modal-close" id="btn-close-recipe-modal">
+      <div class="modal-card pixel-modal-box">
+        <button class="modal-close pixel-close-btn" id="btn-close-recipe-modal">
           <i data-lucide="x"></i>
         </button>
         <div class="modal-scroll-content" id="recipe-modal-content">
@@ -175,22 +183,22 @@
 
     <!-- Online Search Modal -->
     <div id="online-modal" class="modal-backdrop hidden">
-      <div class="modal-card modal-lg">
+      <div class="modal-card modal-lg pixel-modal-box">
         <div class="modal-header" style="padding:20px 24px 0 24px;">
-          <h3><i data-lucide="globe"></i> Search & Import Online Recipes</h3>
-          <button class="modal-close" id="btn-close-online-modal">
+          <h3 class="pixel-text-gold"><i data-lucide="globe"></i> WORLD WIDE SEARCH [ONLINE]</h3>
+          <button class="modal-close pixel-close-btn" id="btn-close-online-modal">
             <i data-lucide="x"></i>
           </button>
         </div>
         <div class="modal-body" style="padding:20px 24px;">
-          <p style="color:var(--text-secondary); margin-bottom:14px; font-size:0.9rem;">
-            Search public online recipe databases. Imported recipes are automatically checked for duplicates and saved to your database.
+          <p class="pixel-text-sub" style="margin-bottom:14px;">
+            SEARCH ONLINE RECIPE DATABASE. IMPORTED POWER RECIPES ARE CHECKED FOR DUPES AND SAVED TO INVENTORY.
           </p>
           
           <div class="online-search-box" style="display:flex; gap:10px; margin-bottom:20px;">
-            <input type="text" id="online-search-input" placeholder="e.g. Tofu, Lentil, Seitan, Curry..." value="Tofu" style="flex:1; padding:10px 14px; border-radius:var(--radius-md); border:1px solid var(--border-light); background:var(--bg-card); color:var(--text-primary);">
-            <button id="btn-search-online-api" class="btn btn-primary">
-              <i data-lucide="search"></i> Search Online
+            <input type="text" id="online-search-input" placeholder="e.g. TOFU, LENTIL, SEITAN..." value="Tofu" class="pixel-input">
+            <button id="btn-search-online-api" class="btn pixel-btn pixel-btn-green">
+              <i data-lucide="search"></i> SEARCH
             </button>
           </div>
 
@@ -203,64 +211,64 @@
 
     <!-- Shopping List & Google Keep Export Drawer -->
     <div id="shopping-drawer" class="drawer-backdrop hidden">
-      <div class="drawer-panel">
+      <div class="drawer-panel pixel-modal-box">
         <div class="drawer-header">
           <div class="drawer-title">
-            <i data-lucide="shopping-bag" class="drawer-icon"></i>
+            <i data-lucide="shopping-bag" class="drawer-icon pixel-text-gold"></i>
             <div>
-              <h3>Ingredient Shopping List</h3>
-              <p id="drawer-recipes-summary">0 recipes selected</p>
+              <h3 class="pixel-text-gold">PLAYER INVENTORY</h3>
+              <p id="drawer-recipes-summary" class="pixel-text-cyan">0 RECIPES SELECTED</p>
             </div>
           </div>
-          <button class="drawer-close" id="btn-close-drawer">
+          <button class="drawer-close pixel-close-btn" id="btn-close-drawer">
             <i data-lucide="x"></i>
           </button>
         </div>
 
         <div class="drawer-body">
           <!-- Servings Adjuster Bar -->
-          <div class="servings-global-control">
-            <div class="control-label">
+          <div class="servings-global-control pixel-border-sm">
+            <div class="control-label pixel-text-yellow">
               <i data-lucide="users"></i>
-              <span>Global Servings Multiplier:</span>
+              <span>SERVINGS MULTIPLIER:</span>
             </div>
             <div class="multiplier-buttons">
-              <button class="multiplier-btn" data-multiplier="1">1x</button>
-              <button class="multiplier-btn active" data-multiplier="2">2x</button>
-              <button class="multiplier-btn" data-multiplier="3">3x</button>
-              <button class="multiplier-btn" data-multiplier="4">4x</button>
+              <button class="multiplier-btn pixel-pill" data-multiplier="1">1X</button>
+              <button class="multiplier-btn active pixel-pill" data-multiplier="2">2X</button>
+              <button class="multiplier-btn pixel-pill" data-multiplier="3">3X</button>
+              <button class="multiplier-btn pixel-pill" data-multiplier="4">4X</button>
             </div>
           </div>
 
           <!-- Google Keep Export Primary Action Box -->
-          <div class="keep-export-banner">
+          <div class="keep-export-banner pixel-border-sm">
             <div class="keep-header">
-              <div class="keep-badge">
-                <i data-lucide="check-square"></i> Google Keep Ready
+              <div class="keep-badge pixel-badge-gold">
+                <i data-lucide="check-square"></i> GOOGLE KEEP SYNC
               </div>
-              <span class="keep-subtitle">Export your ingredient checklist to Google Keep</span>
+              <span class="keep-subtitle pixel-text-sub">EXPORT CHECKLIST DIRECT TO GOOGLE KEEP</span>
             </div>
             
             <div class="keep-action-grid">
-              <button id="btn-export-webshare" class="btn btn-keep-primary">
+              <button id="btn-export-webshare" class="btn pixel-btn pixel-btn-green">
                 <i data-lucide="share-2"></i>
                 <div class="btn-stacked">
-                  <span class="main-text">Send to Google Keep</span>
-                  <span class="sub-text">Web Share / App Integration</span>
+                  <span class="main-text">SEND TO KEEP [A]</span>
+                  <span class="sub-text">WEB SHARE API</span>
                 </div>
               </button>
 
-              <button id="btn-export-keep-new" class="btn btn-keep-outline">
+              <button id="btn-export-keep-new" class="btn pixel-btn pixel-btn-yellow">
                 <i data-lucide="external-link"></i>
                 <div class="btn-stacked">
-                  <span class="main-text">Open keep.new</span>
-                  <span class="sub-text">Direct Web Note</span>
+                  <span class="main-text">OPEN KEEP.NEW</span>
+                  <span class="sub-text">DIRECT NOTE</span>
                 </div>
               </button>
 
-              <button id="btn-copy-checklist" class="btn btn-keep-ghost">
+              <button id="btn-copy-checklist" class="btn pixel-btn pixel-btn-cyan">
                 <i data-lucide="copy"></i>
-                <span>Copy Checklist</span>
+                <span>COPY LIST</span>
               </button>
             </div>
           </div>
@@ -272,8 +280,8 @@
         </div>
 
         <div class="drawer-footer">
-          <button id="btn-clear-shopping-list" class="btn btn-ghost text-danger">
-            <i data-lucide="trash-2"></i> Clear Shopping List
+          <button id="btn-clear-shopping-list" class="btn pixel-btn pixel-btn-danger">
+            <i data-lucide="trash-2"></i> CLEAR INVENTORY
           </button>
         </div>
       </div>
