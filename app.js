@@ -1,6 +1,6 @@
 /**
  * VegePower Application Controller
- * Features: Admin Interface, Recipe & Subscriber Email Administration,
+ * Features: Admin Interface, Instant Weekly Digest Email Broadcast, Recipe & Subscriber Email Administration,
  * Interactive Voting, Instagram Recipe Discovery, and Google Keep Export.
  */
 
@@ -58,6 +58,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const adminRecipesTableContainer = document.getElementById('admin-recipes-table-container');
   const adminSubscribersTableContainer = document.getElementById('admin-subscribers-table-container');
   const btnExportSubscribers = document.getElementById('btn-export-subscribers');
+  const btnSendDigestNow = document.getElementById('btn-send-digest-now');
+
+  // Digest Confirmation Modal Elements
+  const digestModal = document.getElementById('digest-modal');
+  const btnCloseDigestModal = document.getElementById('btn-close-digest-modal');
+  const digestSentSummaryText = document.getElementById('digest-sent-summary-text');
+  const digestEmailPreview = document.getElementById('digest-email-preview');
 
   // Header & Bottom Bar Cart Buttons
   const btnOpenCartHeader = document.getElementById('btn-open-cart-header');
@@ -261,6 +268,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         UIComponents.showToast('No subscribers to export.', 'info');
       }
     });
+  }
+
+  /* ==========================================================================
+     Immediate Digest Dispatch Handler
+     ========================================================================== */
+  if (btnSendDigestNow) {
+    btnSendDigestNow.addEventListener('click', () => {
+      const result = AdminService.dispatchDigestNow(AppState.allRecipes);
+      if (!result.success) {
+        UIComponents.showToast(result.error, 'info');
+        return;
+      }
+
+      digestSentSummaryText.textContent = `🚀 Weekly Digest successfully dispatched to ${result.sentCount} registered subscriber(s)!`;
+      digestEmailPreview.innerHTML = result.digest.bodyHtml;
+
+      digestModal.classList.remove('hidden');
+      UIComponents.showToast(`Dispatched Weekly Digest to ${result.sentCount} subscriber(s)!`, 'success', 5000);
+    });
+  }
+
+  if (btnCloseDigestModal) {
+    btnCloseDigestModal.addEventListener('click', () => digestModal.classList.add('hidden'));
   }
 
   /* ==========================================================================
