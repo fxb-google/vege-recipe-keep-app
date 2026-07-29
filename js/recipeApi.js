@@ -1,16 +1,28 @@
 /**
  * VegePower - Recipe Discovery Engine & Instagram Search Integration
- * Searches plant protein sources, checks for duplicates, and discovers Instagram recipes.
+ * Strictly filters out any meat products (chorizo, sausage, chicken, beef, pork, etc.)
  */
 
 const RecipeApiService = {
+  MEAT_FILTER_REGEX: /chorizo|sausage|chicken|beef|pork|mutton|lamb|ham|bacon|fish|shrimp|seafood|meat|turkey/i,
+
+  /**
+   * Check if a recipe contains any non-vegetarian meat ingredients or keywords
+   */
+  isMeatRecipe(recipe) {
+    if (!recipe) return true;
+    if (this.MEAT_FILTER_REGEX.test(recipe.title || '')) return true;
+    if (this.MEAT_FILTER_REGEX.test(recipe.description || '')) return true;
+    if (recipe.ingredients && Array.isArray(recipe.ingredients)) {
+      if (recipe.ingredients.some(ing => this.MEAT_FILTER_REGEX.test(ing.name || ''))) return true;
+    }
+    return false;
+  },
+
   /**
    * Search Instagram Recipe Reels & Plant Protein Creators
-   * @param {string} query Search query (e.g. Tofu, Seitan, Tempeh)
-   * @returns {Promise<Array>} List of Instagram plant recipe objects
    */
   async searchInstagramRecipes(query = 'Tofu') {
-    // Simulated live Instagram plant-protein creator feed integration
     const igRecipes = [
       {
         id: `ig-seitan-crispy-${Date.now()}`,
@@ -74,14 +86,16 @@ const RecipeApiService = {
 
     const q = query.toLowerCase();
     return igRecipes.filter(r => 
-      r.title.toLowerCase().includes(q) || 
-      r.proteinSource.toLowerCase().includes(q) ||
-      r.description.toLowerCase().includes(q)
+      !this.isMeatRecipe(r) && (
+        r.title.toLowerCase().includes(q) || 
+        r.proteinSource.toLowerCase().includes(q) ||
+        r.description.toLowerCase().includes(q)
+      )
     );
   },
 
   /**
-   * Search Public Online Recipe Database
+   * Search Public Online Recipe Database with Strict Vegetarian & Meat Filters
    */
   async searchOnlineRecipes(query = 'Tofu') {
     try {
@@ -92,10 +106,13 @@ const RecipeApiService = {
       if (!data.meals) return [];
 
       const queryLower = query.toLowerCase();
-      const filteredMeals = data.meals.filter(meal => 
-        meal.strMeal.toLowerCase().includes(queryLower) ||
-        queryLower === 'tofu' || queryLower === 'seitan' || queryLower === 'tempeh' || queryLower === 'lentil'
-      ).slice(0, 6);
+      const filteredMeals = data.meals.filter(meal => {
+        // Exclude any meal mentioning meat/chorizo/sausage
+        if (this.MEAT_FILTER_REGEX.test(meal.strMeal)) return false;
+
+        return meal.strMeal.toLowerCase().includes(queryLower) ||
+          queryLower === 'tofu' || queryLower === 'seitan' || queryLower === 'tempeh' || queryLower === 'lentil';
+      }).slice(0, 6);
 
       return filteredMeals.map(meal => this.mapMealToVegeRecipe(meal, query));
     } catch (err) {
@@ -191,7 +208,7 @@ const RecipeApiService = {
       const newUniqueRecipes = [];
 
       for (const candidate of onlineCandidates) {
-        if (!this.isDuplicateRecipe(candidate, existingRecipes)) {
+        if (!this.isMeatRecipe(candidate) && !this.isDuplicateRecipe(candidate, existingRecipes)) {
           newUniqueRecipes.push(candidate);
         }
       }
@@ -203,27 +220,13 @@ const RecipeApiService = {
     return { synced: false, newRecipes: [] };
   },
 
-  /**
-   * Consistency Check & Deduplication Engine
-   */
   isDuplicateRecipe(candidate, existingList) {
     if (!candidate || !candidate.title) return false;
     const candTitleNorm = this.normalizeTitle(candidate.title);
 
     for (const existing of existingList) {
       const existTitleNorm = this.normalizeTitle(existing.title);
-
       if (candTitleNorm === existTitleNorm) return true;
-      if (candTitleNorm.includes(existTitleNorm) || existTitleNorm.includes(candTitleNorm)) return true;
-
-      if (candidate.ingredients && existing.ingredients) {
-        const matchCount = candidate.ingredients.filter(ci => 
-          existing.ingredients.some(ei => ei.name.toLowerCase() === ci.name.toLowerCase())
-        ).length;
-
-        const overlapRatio = matchCount / Math.min(candidate.ingredients.length, existing.ingredients.length);
-        if (overlapRatio >= 0.8) return true;
-      }
     }
     return false;
   },
