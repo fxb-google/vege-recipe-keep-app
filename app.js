@@ -1,11 +1,11 @@
 /**
- * VegePower - Main Application Logic
- * Integrates Recipe engine, Search/Filter, Cart Aggregation,
- * and Google Keep Exporter.
+ * VegePower - Main Application Controller
+ * Features: Light Plant Theme, Daily Auto-Sync & Deduplication Engine,
+ * Infinite Scrolling with IntersectionObserver, and Google Keep Export.
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Initialize Relational IndexedDB Engine
+  // Initialize Database
   await VegeDB.initDB();
   const dbRecipes = await VegeDB.getAllRecipes();
 
@@ -19,13 +19,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     globalMultiplier: 2,
     checkedIngredients: new Set(),
     currentDetailRecipeId: null,
-    theme: localStorage.getItem('vege_theme') || 'dark'
+    theme: localStorage.getItem('vege_theme') || 'light',
+    // Infinite Scroll Pagination State
+    pageSize: 6,
+    currentPage: 1,
+    isLoadingMore: false
   };
 
-  // Set Initial Theme
+  // Set Theme
   document.documentElement.setAttribute('data-theme', AppState.theme);
-
-  // Initialize Lucide Icons
   if (window.lucide) lucide.createIcons();
 
   // DOM Elements
@@ -36,7 +38,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnClearSearch = document.getElementById('btn-clear-search');
   const sortSelect = document.getElementById('sort-select');
   const proteinPills = document.getElementById('protein-filter-pills');
-  
+  const infiniteSentinel = document.getElementById('infinite-scroll-sentinel');
+  const syncBadge = document.getElementById('sync-badge');
+
   // Cart & Drawer DOM
   const cartBadgeCount = document.getElementById('cart-badge-count');
   const cartRecipesCount = document.getElementById('cart-recipes-count');
@@ -47,7 +51,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const drawerRecipesSummary = document.getElementById('drawer-recipes-summary');
   const btnClearShoppingList = document.getElementById('btn-clear-shopping-list');
   
-  // Google Keep Export Buttons
+  // Keep Export Buttons
   const btnQuickExportKeep = document.getElementById('btn-quick-export-keep');
   const btnExportWebshare = document.getElementById('btn-export-webshare');
   const btnExportKeepNew = document.getElementById('btn-export-keep-new');
@@ -58,7 +62,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnCloseRecipeModal = document.getElementById('btn-close-recipe-modal');
   const recipeModalContent = document.getElementById('recipe-modal-content');
 
-  // Online Modal Elements
+  // Online Modal
   const btnFetchOnline = document.getElementById('btn-fetch-online');
   const onlineModal = document.getElementById('online-modal');
   const btnCloseOnlineModal = document.getElementById('btn-close-online-modal');
@@ -68,13 +72,31 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnThemeToggle = document.getElementById('btn-theme-toggle');
 
   /* ==========================================================================
-     Filtering & Sorting Logic
+     Daily Background Auto-Sync & Deduplication Check
      ========================================================================== */
+  async function triggerDailySync() {
+    try {
+      const syncResult = await RecipeApiService.checkAndRunDailyAutoFetch(AppState.allRecipes);
+      if (syncResult.synced && syncResult.newRecipes.length > 0) {
+        // Save new unique recipes to IndexedDB database
+        for (const recipe of syncResult.newRecipes) {
+          await VegeDB.saveRecipe(recipe);
+          AppState.allRecipes.unshift(recipe);
+        }
+        UIComponents.showToast(`Daily Sync: Added ${syncResult.newRecipes.length} new unique plant recipes!`, 'success');
+        renderGrid(true);
+      }
+    } catch (err) {
+      console.warn("Daily sync error:", err);
+    }
+  }
 
+  /* ==========================================================================
+     Filtering, Sorting & Infinite Scroll Pagination
+     ========================================================================== */
   function getFilteredRecipes() {
     let list = [...AppState.allRecipes];
 
-    // Filter by protein source
     if (AppState.activeFilter !== 'all') {
       if (AppState.activeFilter === 'high-protein') {
         list = list.filter(r => r.proteinGrams >= 30);
@@ -83,7 +105,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
 
-    // Filter by search query
     if (AppState.searchQuery.trim() !== '') {
       const q = AppState.searchQuery.toLowerCase().trim();
       list = list.filter(r => 
@@ -93,7 +114,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       );
     }
 
-    // Sort recipes
     list.sort((a, b) => {
       if (AppState.sortBy === 'protein-desc') return b.proteinGrams - a.proteinGrams;
       if (AppState.sortBy === 'calories-asc') return a.calories - b.calories;
@@ -105,30 +125,70 @@ document.addEventListener('DOMContentLoaded', async () => {
     return list;
   }
 
-  function renderGrid() {
+  function renderGrid(resetPagination = true) {
+    if (resetPagination) {
+      AppState.currentPage = 1;
+    }
+
     const filtered = getFilteredRecipes();
     recipeCountBadge.textContent = `${filtered.length} recipe${filtered.length === 1 ? '' : 's'}`;
 
     if (filtered.length === 0) {
       recipeGrid.classList.add('hidden');
       emptyState.classList.remove('hidden');
-    } else {
-      emptyState.classList.add('hidden');
-      recipeGrid.classList.remove('hidden');
+      infiniteSentinel.classList.add('hidden');
+      return;
+    }
 
-      recipeGrid.innerHTML = filtered.map(r => 
-        UIComponents.renderRecipeCard(r, AppState.selectedRecipeIds.has(r.id))
-      ).join('');
+    emptyState.classList.add('hidden');
+    recipeGrid.classList.remove('hidden');
+
+    // Slice for infinite scrolling batch
+    const visibleCount = AppState.currentPage * AppState.pageSize;
+    const paginatedList = filtered.slice(0, visibleCount);
+
+    recipeGrid.innerHTML = paginatedList.map(r => 
+      UIComponents.renderRecipeCard(r, AppState.selectedRecipeIds.has(r.id))
+    ).join('');
+
+    // Toggle Infinite Scroll Sentinel
+    if (visibleCount < filtered.length) {
+      infiniteSentinel.classList.remove('hidden');
+    } else {
+      infiniteSentinel.classList.add('hidden');
     }
 
     if (window.lucide) lucide.createIcons();
     updateCartBadges();
   }
 
-  /* ==========================================================================
-     Shopping List & Aisle Aggregation Logic
-     ========================================================================== */
+  function loadNextPage() {
+    const filtered = getFilteredRecipes();
+    const maxPages = Math.ceil(filtered.length / AppState.pageSize);
 
+    if (AppState.currentPage < maxPages && !AppState.isLoadingMore) {
+      AppState.isLoadingMore = true;
+      AppState.currentPage++;
+
+      setTimeout(() => {
+        renderGrid(false);
+        AppState.isLoadingMore = false;
+      }, 300);
+    }
+  }
+
+  // IntersectionObserver for Infinite Scrolling
+  const observer = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting) {
+      loadNextPage();
+    }
+  }, { threshold: 0.2 });
+
+  if (infiniteSentinel) observer.observe(infiniteSentinel);
+
+  /* ==========================================================================
+     Cart & Shopping List Logic
+     ========================================================================== */
   function getAggregatedShoppingList() {
     const selectedRecipes = AppState.allRecipes.filter(r => AppState.selectedRecipeIds.has(r.id));
     const aisleMap = {
@@ -158,7 +218,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     });
 
-    // Group into categories
     Object.values(itemAggregator).forEach(item => {
       const cat = item.category || 'Pantry';
       if (!aisleMap[cat]) aisleMap[cat] = [];
@@ -176,8 +235,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     cartBadgeCount.textContent = count;
     cartRecipesCount.textContent = `${count} recipe${count === 1 ? '' : 's'} selected`;
     drawerRecipesSummary.textContent = `${count} recipe${count === 1 ? '' : 's'} selected for Keep`;
-
-    // Persist to local storage
     localStorage.setItem('vege_selected_recipes', JSON.stringify(Array.from(AppState.selectedRecipeIds)));
   }
 
@@ -185,7 +242,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const { aisleMap, selectedRecipes } = getAggregatedShoppingList();
     shoppingListItems.innerHTML = UIComponents.renderShoppingAisles(aisleMap, AppState.globalMultiplier);
 
-    // Multiplier active button update
     document.querySelectorAll('.multiplier-btn').forEach(btn => {
       const mult = parseInt(btn.dataset.multiplier);
       btn.classList.toggle('active', mult === AppState.globalMultiplier);
@@ -195,9 +251,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /* ==========================================================================
-     Google Keep Export Handler
+     Google Keep Sync
      ========================================================================== */
-
   async function handleKeepExport(method = 'webshare') {
     const { aisleMap, selectedRecipes } = getAggregatedShoppingList();
     if (selectedRecipes.length === 0) {
@@ -233,30 +288,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /* ==========================================================================
-     Event Listeners Setup
+     Event Listeners
      ========================================================================== */
-
-  // Search input
   searchInput.addEventListener('input', (e) => {
     AppState.searchQuery = e.target.value;
     btnClearSearch.classList.toggle('hidden', AppState.searchQuery === '');
-    renderGrid();
+    renderGrid(true);
   });
 
   btnClearSearch.addEventListener('click', () => {
     searchInput.value = '';
     AppState.searchQuery = '';
     btnClearSearch.classList.add('hidden');
-    renderGrid();
+    renderGrid(true);
   });
 
-  // Sort select
   sortSelect.addEventListener('change', (e) => {
     AppState.sortBy = e.target.value;
-    renderGrid();
+    renderGrid(true);
   });
 
-  // Filter Pills
   proteinPills.addEventListener('click', (e) => {
     const pill = e.target.closest('.pill');
     if (!pill) return;
@@ -265,20 +316,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     pill.classList.add('active');
 
     AppState.activeFilter = pill.dataset.filter;
-    renderGrid();
+    renderGrid(true);
   });
 
-  // Reset Filters Button
   document.getElementById('btn-reset-filters').addEventListener('click', () => {
     searchInput.value = '';
     AppState.searchQuery = '';
     AppState.activeFilter = 'all';
     proteinPills.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
     proteinPills.querySelector('[data-filter="all"]').classList.add('active');
-    renderGrid();
+    renderGrid(true);
   });
 
-  // Recipe Grid Click Events (Add to Cart / View Detail)
   recipeGrid.addEventListener('click', (e) => {
     const btnAdd = e.target.closest('.btn-add-cart');
     const btnView = e.target.closest('.btn-view-detail') || e.target.closest('.recipe-card');
@@ -293,7 +342,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         AppState.selectedRecipeIds.add(id);
         UIComponents.showToast('Added ingredients to shopping list!', 'success');
       }
-      renderGrid();
+      renderGrid(false);
       return;
     }
 
@@ -304,7 +353,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Open Recipe Detail Modal
   function openRecipeDetailModal(id) {
     const recipe = AppState.allRecipes.find(r => r.id === id);
     if (!recipe) return;
@@ -319,7 +367,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   btnCloseRecipeModal.addEventListener('click', () => recipeModal.classList.add('hidden'));
 
-  // Detail Modal Actions
   recipeModalContent.addEventListener('click', (e) => {
     const btnAddModal = e.target.closest('.btn-modal-add-cart');
     if (btnAddModal) {
@@ -331,11 +378,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         UIComponents.showToast('Added to shopping list!', 'success');
       }
       openRecipeDetailModal(id);
-      renderGrid();
+      renderGrid(false);
     }
   });
 
-  // Open Shopping Drawer
   btnOpenCartMobile.addEventListener('click', () => {
     renderDrawer();
     shoppingDrawer.classList.remove('hidden');
@@ -343,7 +389,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   btnCloseDrawer.addEventListener('click', () => shoppingDrawer.classList.add('hidden'));
 
-  // Drawer Multipliers
   document.querySelectorAll('.multiplier-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       AppState.globalMultiplier = parseInt(e.target.dataset.multiplier);
@@ -351,7 +396,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // Drawer Item Checkbox Toggle
   shoppingListItems.addEventListener('change', (e) => {
     if (e.target.matches('input[type="checkbox"]')) {
       const aisle = e.target.dataset.aisle;
@@ -371,22 +415,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Clear Shopping List
   btnClearShoppingList.addEventListener('click', () => {
     AppState.selectedRecipeIds.clear();
     AppState.checkedIngredients.clear();
-    renderGrid();
+    renderGrid(false);
     renderDrawer();
     UIComponents.showToast('Shopping list cleared', 'info');
   });
 
-  // Export Buttons
   btnQuickExportKeep.addEventListener('click', () => handleKeepExport('webshare'));
   btnExportWebshare.addEventListener('click', () => handleKeepExport('webshare'));
   btnExportKeepNew.addEventListener('click', () => handleKeepExport('keep.new'));
   btnCopyChecklist.addEventListener('click', () => handleKeepExport('copy'));
 
-  // Online Search Modal
+  // Online Modal & Deduplication Check
   btnFetchOnline.addEventListener('click', () => {
     onlineModal.classList.remove('hidden');
     triggerOnlineSearch('Tofu');
@@ -410,38 +452,44 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    onlineResultsContainer.innerHTML = fetched.map(recipe => `
-      <div class="recipe-card" style="border:1px solid var(--border-glass)">
-        <div class="card-image-wrapper" style="height:150px">
-          <img src="${recipe.image}" class="card-image">
+    onlineResultsContainer.innerHTML = fetched.map(recipe => {
+      const isDup = RecipeApiService.isDuplicateRecipe(recipe, AppState.allRecipes);
+      return `
+        <div class="recipe-card" style="border:1px solid var(--border-glass)">
+          <div class="card-image-wrapper" style="height:140px">
+            <img src="${recipe.image}" class="card-image">
+          </div>
+          <div class="card-body" style="padding:14px;">
+            <h4 style="font-size:0.92rem; margin-bottom:4px;">${recipe.title}</h4>
+            <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:10px;">${recipe.ingredients.length} ingredients | ${recipe.proteinGrams}g protein</p>
+            ${isDup ? `<span class="badge badge-secondary" style="color:var(--text-muted)"><i data-lucide="check-circle" style="width:12px"></i> In Database</span>` : `
+              <button class="btn btn-primary btn-sm btn-import-online" data-online-id="${recipe.id}">
+                <i data-lucide="plus"></i> Import Recipe
+              </button>
+            `}
+          </div>
         </div>
-        <div class="card-body">
-          <h4 style="font-size:0.95rem; margin-bottom:6px;">${recipe.title}</h4>
-          <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:10px;">${recipe.ingredients.length} ingredients | ${recipe.proteinGrams}g estimated protein</p>
-          <button class="btn btn-primary btn-sm btn-import-online" data-online-id="${recipe.id}">
-            <i data-lucide="plus"></i> Import Recipe
-          </button>
-        </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
 
     if (window.lucide) lucide.createIcons();
 
-    // Attach click listeners to imported recipes
     onlineResultsContainer.querySelectorAll('.btn-import-online').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const id = e.target.closest('.btn-import-online').dataset.onlineId;
         const targetRecipe = fetched.find(r => r.id === id);
         if (targetRecipe) {
-          // Save to IndexedDB database
-          await VegeDB.saveRecipe(targetRecipe);
-          
-          if (!AppState.allRecipes.some(r => r.id === targetRecipe.id)) {
-            AppState.allRecipes.unshift(targetRecipe);
+          // Check for duplication before saving
+          if (RecipeApiService.isDuplicateRecipe(targetRecipe, AppState.allRecipes)) {
+            UIComponents.showToast('Recipe already exists in database!', 'info');
+            return;
           }
+
+          await VegeDB.saveRecipe(targetRecipe);
+          AppState.allRecipes.unshift(targetRecipe);
           AppState.selectedRecipeIds.add(targetRecipe.id);
           onlineModal.classList.add('hidden');
-          renderGrid();
+          renderGrid(true);
           UIComponents.showToast(`Saved "${targetRecipe.title}" to Database & Shopping List!`, 'success');
         }
       });
@@ -450,11 +498,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Theme Toggle
   btnThemeToggle.addEventListener('click', () => {
-    AppState.theme = AppState.theme === 'dark' ? 'light' : 'dark';
+    AppState.theme = AppState.theme === 'light' ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', AppState.theme);
     localStorage.setItem('vege_theme', AppState.theme);
   });
 
-  // Initial Render
-  renderGrid();
+  // Initial Load & Daily Sync Check
+  renderGrid(true);
+  await triggerDailySync();
 });
