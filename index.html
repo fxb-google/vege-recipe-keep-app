@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#faf8f5">
-  <meta name="description" content="VegePower - Fetch high-protein plant recipes (seitan, tofu, tempeh, legumes) with daily deduplication, voting, weekly email summary, and Google Keep export.">
-  <title>VegePower &bull; Plant-Protein Recipes & Google Keep Sync</title>
+  <meta name="description" content="VegePower - Fetch high-protein plant recipes with daily deduplication, voting, weekly email summary, admin interface, and Google Keep export.">
+  <title>VegePower &bull; Plant-Protein Recipes & Admin Portal</title>
   
   <!-- Modern Culinary Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -40,7 +40,7 @@
                 <i data-lucide="refresh-cw" style="width:12px"></i> Daily Sync
               </span>
             </div>
-            <span class="brand-subtitle">Plant Protein & Google Keep Sync</span>
+            <span class="brand-subtitle">Plant Protein & Admin Portal</span>
           </div>
         </div>
 
@@ -57,6 +57,12 @@
             <span class="btn-text">Search Online</span>
           </button>
           
+          <!-- Admin Interface Trigger Button -->
+          <button id="btn-open-admin" class="btn btn-outline btn-sm" title="Admin Portal & Recipe Management">
+            <i data-lucide="key"></i>
+            <span class="btn-text" id="admin-btn-text">Admin Portal</span>
+          </button>
+
           <button id="btn-theme-toggle" class="btn-icon" title="Toggle Light / Dark Mode">
             <i data-lucide="sun" class="sun-icon"></i>
             <i data-lucide="moon" class="moon-icon"></i>
@@ -65,7 +71,7 @@
           <!-- Version Tag -->
           <div class="app-version-badge" title="Live Application Version">
             <span class="version-pulse-dot"></span>
-            <span class="version-text">v3.0.0</span>
+            <span class="version-text">v3.5-ADMIN</span>
           </div>
         </div>
       </div>
@@ -188,6 +194,105 @@
       </button>
     </div>
 
+    <!-- Admin Credentials Login Modal -->
+    <div id="admin-login-modal" class="modal-backdrop hidden">
+      <div class="modal-card" style="max-width: 440px;">
+        <div class="modal-header" style="padding: 24px 24px 0 24px;">
+          <h3><i data-lucide="lock" style="color:var(--forest-900)"></i> Admin Login</h3>
+          <button class="modal-close" id="btn-close-admin-login">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="modal-body" style="padding: 24px;">
+          <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 18px;">
+            Enter secret admin credentials to manage recipe collection and email subscribers.
+          </p>
+
+          <form id="admin-login-form" style="display: flex; flex-direction: column; gap: 14px;">
+            <div>
+              <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Username</label>
+              <input type="text" id="admin-username" placeholder="admin" required class="admin-input" style="width:100%; padding:10px 14px; border-radius:var(--radius-md); border:1px solid var(--border-light); background:var(--bg-card); color:var(--text-primary);">
+            </div>
+
+            <div>
+              <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Password</label>
+              <input type="password" id="admin-password" placeholder="••••••••" required class="admin-input" style="width:100%; padding:10px 14px; border-radius:var(--radius-md); border:1px solid var(--border-light); background:var(--bg-card); color:var(--text-primary);">
+            </div>
+
+            <div id="admin-login-error" style="color: var(--terracotta-500); font-size: 0.82rem; font-weight: 600;" class="hidden">
+              Invalid credentials.
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="margin-top: 6px;">
+              <i data-lucide="key"></i> Authenticate Admin
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin Management Portal Modal -->
+    <div id="admin-portal-modal" class="modal-backdrop hidden">
+      <div class="modal-card modal-lg" style="max-width: 900px;">
+        <div class="modal-header" style="padding: 24px 28px 0 28px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h3><i data-lucide="shield-check" style="color:var(--emerald-600)"></i> VegePower Admin Control Center</h3>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Secret Authenticated Session</span>
+          </div>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <button id="btn-admin-logout" class="btn btn-outline btn-sm" style="color: var(--terracotta-500);">
+              <i data-lucide="log-out"></i> Logout
+            </button>
+            <button class="modal-close" id="btn-close-admin-portal" style="position: static;">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="modal-body" style="padding: 20px 28px 28px 28px; overflow-y: auto; max-height: 75vh;">
+          <!-- Admin Tabs -->
+          <div class="admin-tabs" style="display: flex; gap: 12px; margin-bottom: 20px; border-bottom: 1px solid var(--border-glass); padding-bottom: 12px;">
+            <button class="pill active admin-tab-btn" data-tab="recipes">
+              <i data-lucide="utensils"></i> Recipe Collection (<span id="admin-recipe-count">0</span>)
+            </button>
+            <button class="pill admin-tab-btn" data-tab="subscribers">
+              <i data-lucide="mail"></i> Email Subscribers (<span id="admin-sub-count">0</span>)
+            </button>
+          </div>
+
+          <!-- Tab 1: Recipe Management Panel -->
+          <div id="admin-panel-recipes" class="admin-panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <p style="font-size: 0.88rem; color: var(--text-secondary);">
+                Administrate your recipe database. Click <strong>Delete</strong> on any recipe you dislike to permanently purge it.
+              </p>
+              <input type="text" id="admin-recipe-search" placeholder="Filter recipes..." style="padding: 6px 12px; border-radius: var(--radius-md); border: 1px solid var(--border-light); font-size: 0.85rem;">
+            </div>
+
+            <div id="admin-recipes-table-container" style="display: flex; flex-direction: column; gap: 10px;">
+              <!-- Populated dynamically via JS -->
+            </div>
+          </div>
+
+          <!-- Tab 2: Email Subscribers Panel -->
+          <div id="admin-panel-subscribers" class="admin-panel hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <p style="font-size: 0.88rem; color: var(--text-secondary);">
+                Registered subscriber email addresses for weekly recipe digests.
+              </p>
+              <button id="btn-export-subscribers" class="btn btn-outline btn-sm">
+                <i data-lucide="download"></i> Export CSV
+              </button>
+            </div>
+
+            <div id="admin-subscribers-table-container" style="display: flex; flex-direction: column; gap: 10px;">
+              <!-- Populated dynamically via JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Recipe Detail Modal -->
     <div id="recipe-modal" class="modal-backdrop hidden">
       <div class="modal-card">
@@ -211,7 +316,7 @@
         </div>
         <div class="modal-body" style="padding:20px 24px;">
           <p style="color:var(--text-secondary); margin-bottom:14px; font-size:0.9rem;">
-            Discover plant-based recipes from public databases and Instagram creators. Imported recipes are checked for duplicates.
+            Discover plant-based recipes from public databases and Instagram creators.
           </p>
           
           <div class="online-search-box" style="display:flex; gap:10px; margin-bottom:20px;">
@@ -316,6 +421,7 @@
   <script src="js/recipesData.js"></script>
   <script src="js/recipeApi.js"></script>
   <script src="js/db.js"></script>
+  <script src="js/adminService.js"></script>
   <script src="js/keepExporter.js"></script>
   <script src="js/uiComponents.js"></script>
   <script src="app.js"></script>
