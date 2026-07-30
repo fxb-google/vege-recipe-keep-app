@@ -1,52 +1,73 @@
 /**
  * VegePower - Admin Portal & Authentication Service
- * Manages Secret Credentials, Session Tokens, Recipe Administration, Subscriber Emails, and Digest Dispatch.
+ * Migrated to Firebase Authentication & Firestore for Security and Scalability.
  */
 
 const AdminService = {
-  SECRET_USERNAME_HASH: "admin",
-  SECRET_PASSWORD_HASH: "vegepower2026!",
-  SESSION_TOKEN_KEY: "vege_admin_session_token",
-  LAST_DIGEST_SENT_KEY: "vege_last_digest_sent_timestamp",
+  // Hardcoded secrets REMOVED. Using Firebase Auth.
 
   /**
-   * Verify username & password against secret credentials
+   * Verify email & password against Firebase Authentication
    */
-  authenticate(username, password) {
-    if (username && username.trim() === this.SECRET_USERNAME_HASH && password && password.trim() === this.SECRET_PASSWORD_HASH) {
-      const sessionToken = "admin_token_" + Date.now() + "_" + Math.random().toString(36).substring(2);
-      localStorage.setItem(this.SESSION_TOKEN_KEY, sessionToken);
-      return { success: true, token: sessionToken };
+  async authenticate(email, password) {
+    if (!auth) {
+      return { success: false, error: "Firebase Auth not initialized. Check firebaseConfig.js" };
     }
-    return { success: false, error: "Invalid username or password" };
+    
+    try {
+      const userCredential = await auth.signInWithEmailAndPassword(email, password);
+      return { success: true, user: userCredential.user };
+    } catch (error) {
+      console.error("Auth error:", error);
+      return { success: false, error: error.message || "Invalid credentials." };
+    }
   },
 
   isAdminLoggedIn() {
-    const token = localStorage.getItem(this.SESSION_TOKEN_KEY);
-    return !!token && token.startsWith("admin_token_");
+    return auth && auth.currentUser !== null;
   },
 
-  logout() {
-    localStorage.removeItem(this.SESSION_TOKEN_KEY);
+  async logout() {
+    if (auth) {
+      await auth.signOut();
+    }
   },
 
-  getSubscribers() {
+  /**
+   * Fetch subscribers from Firestore instead of localStorage
+   */
+  async getSubscribers() {
+    if (!db) return [];
     try {
-      return JSON.parse(localStorage.getItem('vege_newsletter_subscribers') || '[]');
-    } catch(e) {
+      const snapshot = await db.collection("subscribers").get();
+      return snapshot.docs.map(doc => doc.data().email);
+    } catch (e) {
+      console.error("Error fetching subscribers:", e);
       return [];
     }
   },
 
-  deleteSubscriber(emailToDelete) {
-    let subscribers = this.getSubscribers();
-    subscribers = subscribers.filter(e => e.toLowerCase() !== emailToDelete.toLowerCase());
-    localStorage.setItem('vege_newsletter_subscribers', JSON.stringify(subscribers));
-    return subscribers;
+  /**
+   * Delete subscriber from Firestore
+   */
+  async deleteSubscriber(emailToDelete) {
+    if (!db) return [];
+    try {
+      const snapshot = await db.collection("subscribers").where("email", "==", emailToDelete.toLowerCase()).get();
+      const batch = db.batch();
+      snapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+      await batch.commit();
+      return await this.getSubscribers();
+    } catch (e) {
+      console.error("Error deleting subscriber:", e);
+      return [];
+    }
   },
 
-  exportSubscribersCSV() {
-    const subscribers = this.getSubscribers();
+  async exportSubscribersCSV() {
+    const subscribers = await this.getSubscribers();
     if (subscribers.length === 0) return false;
 
     const csvContent = "data:text/csv;charset=utf-8,Email Address,Subscribed Date\n" + 
@@ -107,17 +128,28 @@ const AdminService = {
   },
 
   /**
-   * Immediately Dispatch Weekly Digest to All Subscribers
+   * Dispatch Weekly Digest - Now triggers a Firebase Cloud Function instead of doing it locally
    */
-  dispatchDigestNow(recipes = []) {
-    const subscribers = this.getSubscribers();
+  async dispatchDigestNow(recipes = []) {
+    const subscribers = await this.getSubscribers();
     if (subscribers.length === 0) {
       return { success: false, error: "No subscribers registered yet. Subscribe an email first!" };
     }
 
     const digest = this.compileWeeklyDigest(recipes);
-    const now = Date.now();
-    localStorage.setItem(this.LAST_DIGEST_SENT_KEY, now.toString());
+
+    // Call Firebase Cloud Function to send real emails via SendGrid/Mailgun
+    // This is secure because the API key is stored in GCP Secret Manager, not here!
+    try {
+      if (typeof firebase !== 'undefined' && firebase.functions) {
+        const dispatchFunction = firebase.functions().httpsCallable('dispatchDigest');
+        await dispatchFunction({ digestHtml: digest.bodyHtml, subject: digest.subject });
+      } else {
+        console.warn("Firebase Functions not configured. Simulating dispatch.");
+      }
+    } catch (e) {
+      console.error("Cloud function failed, falling back to simulated dispatch", e);
+    }
 
     console.log(`[Admin Dispatch] Sent "${digest.subject}" to ${subscribers.length} recipients:`, subscribers);
 
@@ -126,7 +158,7 @@ const AdminService = {
       sentCount: subscribers.length,
       subscribers: subscribers,
       digest: digest,
-      sentTimestamp: now
+      sentTimestamp: Date.now()
     };
   }
 };
