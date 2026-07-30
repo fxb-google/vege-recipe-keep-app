@@ -71,7 +71,7 @@
           <!-- Version Tag -->
           <div class="app-version-badge" title="Live Application Version">
             <span class="version-pulse-dot"></span>
-            <span class="version-text">v258</span>
+            <span class="version-text">v275</span>
           </div>
         </div>
       </div>
@@ -210,8 +210,8 @@
 
           <form id="admin-login-form" style="display: flex; flex-direction: column; gap: 14px;">
             <div>
-              <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Username</label>
-              <input type="text" id="admin-username" placeholder="admin" required class="admin-input" style="width:100%; padding:10px 14px; border-radius:var(--radius-md); border:1px solid var(--border-light); background:var(--bg-card); color:var(--text-primary);">
+              <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Admin Email</label>
+              <input type="email" id="admin-username" placeholder="admin@example.com" required class="admin-input" style="width:100%; padding:10px 14px; border-radius:var(--radius-md); border:1px solid var(--border-light); background:var(--bg-card); color:var(--text-primary);">
             </div>
 
             <div>
@@ -453,6 +453,12 @@
     <div id="toast-container" class="toast-container"></div>
   </div>
 
+  <!-- Firebase SDK (Compat Mode for Vanilla JS) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <script src="js/firebaseConfig.js"></script>
   <script src="js/recipesData.js"></script>
   <script src="js/recipeApi.js"></script>
   <script src="js/db.js"></script>
