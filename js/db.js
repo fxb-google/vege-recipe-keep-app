@@ -1,69 +1,34 @@
 /**
- * VegePower - Database Persistence Layer (IndexedDB Engine)
- * Manages Relational Stores for Recipes, Ingredients, Instructions, Shopping Lists, and Votes.
+ * VegePower - Database Persistence Layer (Firestore Engine)
+ * Replaces IndexedDB to provide real-time global syncing and secure storage on GCP.
  */
 
 const VegeDB = {
-  dbName: 'VegePowerDB_v2',
-  dbVersion: 2,
-  db: null,
-
   /**
-   * Initialize IndexedDB database, create schema object stores & indexes
+   * Initialize Database - now just ensures Firestore is ready and seeds default data if empty.
    */
   async initDB() {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName, this.dbVersion);
+    if (!db) {
+      console.warn("Firestore not initialized, relying on local recipesData.");
+      return;
+    }
 
-      request.onupgradeneeded = (event) => {
-        const db = event.target.result;
+    try {
+      // Enable offline persistence
+      await db.enablePersistence({ synchronizeTabs: true });
+    } catch (err) {
+      console.warn("Firestore offline persistence failed (may be multiple tabs open)", err);
+    }
 
-        // 1. Recipes Store
-        if (!db.objectStoreNames.contains('recipes')) {
-          const recipeStore = db.createObjectStore('recipes', { keyPath: 'id' });
-          recipeStore.createIndex('proteinSource', 'proteinSource', { unique: false });
-          recipeStore.createIndex('proteinGrams', 'proteinGrams', { unique: false });
-          recipeStore.createIndex('title', 'title', { unique: false });
-        }
-
-        // 2. Relational Ingredients Store
-        if (!db.objectStoreNames.contains('ingredients')) {
-          const ingStore = db.createObjectStore('ingredients', { keyPath: 'id', autoIncrement: true });
-          ingStore.createIndex('recipeId', 'recipeId', { unique: false });
-          ingStore.createIndex('name', 'name', { unique: false });
-          ingStore.createIndex('category', 'category', { unique: false });
-        }
-
-        // 3. Relational Instructions Store
-        if (!db.objectStoreNames.contains('instructions')) {
-          const instStore = db.createObjectStore('instructions', { keyPath: 'id', autoIncrement: true });
-          instStore.createIndex('recipeId', 'recipeId', { unique: false });
-          instStore.createIndex('stepNumber', 'stepNumber', { unique: false });
-        }
-
-        // 4. Shopping List Store
-        if (!db.objectStoreNames.contains('shopping_list')) {
-          db.createObjectStore('shopping_list', { keyPath: 'recipeId' });
-        }
-      };
-
-      request.onsuccess = async (event) => {
-        this.db = event.target.result;
-        await this.syncAndSanitizeDatabase();
-        resolve(this.db);
-      };
-
-      request.onerror = (event) => {
-        console.error('IndexedDB init error:', event.target.error);
-        reject(event.target.error);
-      };
-    });
+    await this.syncAndSanitizeDatabase();
   },
 
   /**
    * Sync default recipes and purge any non-vegetarian/meat-based items
    */
   async syncAndSanitizeDatabase() {
+    if (!db) return;
+
     const existing = await this.getAllRecipes();
     const meatRegex = /chorizo|sausage|chicken|beef|pork|mutton|lamb|ham|fish|shrimp|seafood|meat/i;
 
@@ -81,157 +46,71 @@ const VegeDB = {
 
     // Seed default recipes if dataset missing
     const refreshed = await this.getAllRecipes();
-    if (typeof VEGE_RECIPES !== 'undefined') {
-      for (const defaultRecipe of VEGE_RECIPES) {
-        const found = refreshed.find(r => r.id === defaultRecipe.id);
-        if (!found) {
-          await this.saveRecipe(defaultRecipe);
-        }
-      }
+    if (typeof VEGE_RECIPES !== 'undefined' && refreshed.length === 0) {
+      console.log("Seeding initial recipes to Firestore...");
+      const batch = db.batch();
+      
+      VEGE_RECIPES.forEach(defaultRecipe => {
+        // Initialize vote counts if missing
+        defaultRecipe.likesCount = defaultRecipe.likesCount || 120;
+        defaultRecipe.dislikesCount = defaultRecipe.dislikesCount || 3;
+        
+        const docRef = db.collection("recipes").doc(defaultRecipe.id);
+        batch.set(docRef, defaultRecipe);
+      });
+
+      await batch.commit();
+      console.log("Seeding complete.");
     }
   },
 
   /**
-   * Delete a recipe and its ingredients/instructions
+   * Delete a recipe
    */
   async deleteRecipe(recipeId) {
-    if (!this.db) return;
-    return new Promise((resolve, reject) => {
-      const tx = this.db.transaction(['recipes'], 'readwrite');
-      const store = tx.objectStore('recipes');
-      const req = store.delete(recipeId);
-      req.onsuccess = () => resolve();
-      req.onerror = () => reject(req.error);
-    });
+    if (!db) return;
+    try {
+      await db.collection("recipes").doc(recipeId).delete();
+    } catch (e) {
+      console.error("Error deleting recipe:", e);
+    }
   },
 
   /**
-   * Get all recipes with their joined ingredients, instructions, and voting counts
+   * Get all recipes
    */
   async getAllRecipes() {
-    if (!this.db) await this.initDB();
+    if (!db) {
+      return typeof VEGE_RECIPES !== 'undefined' ? VEGE_RECIPES : [];
+    }
 
-    return new Promise((resolve, reject) => {
-      const tx = this.db.transaction(['recipes', 'ingredients', 'instructions'], 'readonly');
-      const recipeStore = tx.objectStore('recipes');
-      const ingStore = tx.objectStore('ingredients');
-      const instStore = tx.objectStore('instructions');
-
-      const recipesReq = recipeStore.getAll();
-
-      recipesReq.onsuccess = async () => {
-        const recipes = recipesReq.result || [];
-        const fullRecipes = [];
-
-        for (const recipe of recipes) {
-          const ingredients = await this.getIngredientsByRecipeId(ingStore, recipe.id);
-          const instructions = await this.getInstructionsByRecipeId(instStore, recipe.id);
-
-          fullRecipes.push({
-            ...recipe,
-            likesCount: recipe.likesCount !== undefined ? recipe.likesCount : 120,
-            dislikesCount: recipe.dislikesCount !== undefined ? recipe.dislikesCount : 3,
-            ingredients,
-            instructions: instructions.map(i => i.instructionText)
-          });
-        }
-
-        resolve(fullRecipes);
-      };
-
-      recipesReq.onerror = () => reject(recipesReq.error);
-    });
+    try {
+      const snapshot = await db.collection("recipes").get();
+      const recipes = [];
+      snapshot.forEach(doc => {
+        recipes.push({ id: doc.id, ...doc.data() });
+      });
+      return recipes;
+    } catch (e) {
+      console.error("Error fetching recipes from Firestore:", e);
+      return typeof VEGE_RECIPES !== 'undefined' ? VEGE_RECIPES : [];
+    }
   },
 
   /**
-   * Save or Update a Recipe with likesCount and dislikesCount persistence
+   * Save or Update a Recipe
    */
   async saveRecipe(recipe) {
-    if (!this.db) await this.initDB();
+    if (!db) return;
+    
+    // Ensure vote fields exist to prevent undefined errors in Firestore
+    if (recipe.likesCount === undefined) recipe.likesCount = 120;
+    if (recipe.dislikesCount === undefined) recipe.dislikesCount = 3;
 
-    return new Promise((resolve, reject) => {
-      const tx = this.db.transaction(['recipes', 'ingredients', 'instructions'], 'readwrite');
-      const recipeStore = tx.objectStore('recipes');
-      const ingStore = tx.objectStore('ingredients');
-      const instStore = tx.objectStore('instructions');
-
-      // 1. Put Recipe Record with Vote Counts
-      recipeStore.put({
-        id: recipe.id,
-        title: recipe.title,
-        proteinSource: recipe.proteinSource,
-        proteinGrams: recipe.proteinGrams,
-        calories: recipe.calories,
-        prepTime: recipe.prepTime,
-        cookTime: recipe.cookTime,
-        servings: recipe.servings,
-        difficulty: recipe.difficulty,
-        category: recipe.category,
-        image: recipe.image,
-        description: recipe.description,
-        likesCount: recipe.likesCount !== undefined ? recipe.likesCount : 120,
-        dislikesCount: recipe.dislikesCount !== undefined ? recipe.dislikesCount : 3,
-        isOnline: !!recipe.isOnline
-      });
-
-      // 2. Clear old relational ingredients & save new ones
-      const ingIndex = ingStore.index('recipeId');
-      const ingKeyReq = ingIndex.getAllKeys(recipe.id);
-
-      ingKeyReq.onsuccess = () => {
-        ingKeyReq.result.forEach(key => ingStore.delete(key));
-
-        if (recipe.ingredients && Array.isArray(recipe.ingredients)) {
-          recipe.ingredients.forEach(ing => {
-            ingStore.add({
-              recipeId: recipe.id,
-              name: ing.name,
-              amount: ing.amount,
-              unit: ing.unit,
-              category: ing.category || 'Pantry'
-            });
-          });
-        }
-      };
-
-      // 3. Clear old instructions & save new ones
-      const instIndex = instStore.index('recipeId');
-      const instKeyReq = instIndex.getAllKeys(recipe.id);
-
-      instKeyReq.onsuccess = () => {
-        instKeyReq.result.forEach(key => instStore.delete(key));
-
-        if (recipe.instructions && Array.isArray(recipe.instructions)) {
-          recipe.instructions.forEach((stepText, idx) => {
-            instStore.add({
-              recipeId: recipe.id,
-              stepNumber: idx + 1,
-              instructionText: stepText
-            });
-          });
-        }
-      };
-
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
-  },
-
-  getIngredientsByRecipeId(ingStore, recipeId) {
-    return new Promise((resolve) => {
-      const index = ingStore.index('recipeId');
-      const req = index.getAll(recipeId);
-      req.onsuccess = () => resolve(req.result || []);
-      req.onerror = () => resolve([]);
-    });
-  },
-
-  getInstructionsByRecipeId(instStore, recipeId) {
-    return new Promise((resolve) => {
-      const index = instStore.index('recipeId');
-      const req = index.getAll(recipeId);
-      req.onsuccess = () => resolve(req.result || []);
-      req.onerror = () => resolve([]);
-    });
+    try {
+      await db.collection("recipes").doc(recipe.id).set(recipe);
+    } catch (e) {
+      console.error("Error saving recipe to Firestore:", e);
+    }
   }
 };
