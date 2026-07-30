@@ -7,6 +7,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
   // Initialize Database & Purge Non-Vegetarian Items
   await VegeDB.initDB();
+  
   let dbRecipes = await VegeDB.getAllRecipes();
 
   // Load User Votes State
@@ -25,6 +26,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     currentDetailRecipeId: null,
     userVotes: userVotes
   };
+
+  // Real-time Firestore Sync for Global Votes & Recipes
+  if (typeof db !== 'undefined' && db !== null) {
+    db.collection("recipes").onSnapshot((snapshot) => {
+      const liveRecipes = [];
+      snapshot.forEach(doc => {
+        liveRecipes.push({ id: doc.id, ...doc.data() });
+      });
+      // Only re-render if we actually received data
+      if (liveRecipes.length > 0) {
+        AppState.allRecipes = liveRecipes;
+        
+        // Ensure UI updates to reflect real-time global vote changes
+        if (!document.getElementById('empty-state').classList.contains('hidden') || 
+            !document.getElementById('recipe-grid').classList.contains('hidden')) {
+          renderGrid();
+        }
+
+        // If detail modal is open, re-render it to show new vote counts
+        if (AppState.currentDetailRecipeId && !document.getElementById('recipe-modal').classList.contains('hidden')) {
+          openRecipeDetailModal(AppState.currentDetailRecipeId, AppState.detailServingsMultiplier);
+        }
+      }
+    }, (error) => {
+      console.warn("Real-time sync disabled or failed (likely missing config)", error);
+    });
+  }
 
   // Main UI Elements
   const recipeGrid = document.getElementById('recipe-grid');
@@ -129,16 +157,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   btnCloseAdminLogin.addEventListener('click', () => adminLoginModal.classList.add('hidden'));
   btnCloseAdminPortal.addEventListener('click', () => adminPortalModal.classList.add('hidden'));
 
-  adminLoginForm.addEventListener('submit', (e) => {
+  adminLoginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const username = adminUsernameInput.value;
     const password = adminPasswordInput.value;
 
-    const res = AdminService.authenticate(username, password);
+    const res = await AdminService.authenticate(username, password);
     if (res.success) {
       adminLoginModal.classList.add('hidden');
       updateAdminButtonState();
-      renderAdminPortal();
+      await renderAdminPortal();
       adminPortalModal.classList.remove('hidden');
       UIComponents.showToast('Admin Authenticated Successfully!', 'success');
     } else {
@@ -147,8 +175,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  btnAdminLogout.addEventListener('click', () => {
-    AdminService.logout();
+  btnAdminLogout.addEventListener('click', async () => {
+    await AdminService.logout();
     updateAdminButtonState();
     adminPortalModal.classList.add('hidden');
     UIComponents.showToast('Admin session logged out', 'info');
@@ -166,13 +194,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  function renderAdminPortal() {
-    const subscribers = AdminService.getSubscribers();
+  async function renderAdminPortal() {
+    const subscribers = await AdminService.getSubscribers();
     adminRecipeCount.textContent = AppState.allRecipes.length;
     adminSubCount.textContent = subscribers.length;
 
     renderAdminRecipesList();
-    renderAdminSubscribersList();
+    await renderAdminSubscribersList();
   }
 
   function renderAdminRecipesList() {
@@ -225,8 +253,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     adminRecipeSearch.addEventListener('input', renderAdminRecipesList);
   }
 
-  function renderAdminSubscribersList() {
-    const subscribers = AdminService.getSubscribers();
+  async function renderAdminSubscribersList() {
+    const subscribers = await AdminService.getSubscribers();
     if (subscribers.length === 0) {
       adminSubscribersTableContainer.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted);">No subscribers registered yet.</div>`;
       return;
@@ -247,12 +275,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (window.lucide) lucide.createIcons();
 
     adminSubscribersTableContainer.querySelectorAll('.btn-delete-sub-admin').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      btn.addEventListener('click', async (e) => {
         const email = e.target.closest('.btn-delete-sub-admin').dataset.email;
         if (confirm(`Remove ${email} from subscription list?`)) {
-          AdminService.deleteSubscriber(email);
-          renderAdminSubscribersList();
-          adminSubCount.textContent = AdminService.getSubscribers().length;
+          const newSubs = await AdminService.deleteSubscriber(email);
+          await renderAdminSubscribersList();
+          adminSubCount.textContent = newSubs.length;
           UIComponents.showToast(`Removed ${email} from subscribers.`, 'info');
         }
       });
@@ -260,8 +288,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   if (btnExportSubscribers) {
-    btnExportSubscribers.addEventListener('click', () => {
-      const ok = AdminService.exportSubscribersCSV();
+    btnExportSubscribers.addEventListener('click', async () => {
+      const ok = await AdminService.exportSubscribersCSV();
       if (ok) {
         UIComponents.showToast('Exported subscriber emails to CSV file!', 'success');
       } else {
@@ -274,8 +302,8 @@ document.addEventListener('DOMContentLoaded', async () => {
      Immediate Digest Dispatch Handler
      ========================================================================== */
   if (btnSendDigestNow) {
-    btnSendDigestNow.addEventListener('click', () => {
-      const result = AdminService.dispatchDigestNow(AppState.allRecipes);
+    btnSendDigestNow.addEventListener('click', async () => {
+      const result = await AdminService.dispatchDigestNow(AppState.allRecipes);
       if (!result.success) {
         UIComponents.showToast(result.error, 'info');
         return;
@@ -313,15 +341,21 @@ document.addEventListener('DOMContentLoaded', async () => {
      Weekly Email Newsletter Subscription Handler
      ========================================================================== */
   if (newsletterForm) {
-    newsletterForm.addEventListener('submit', (e) => {
+    newsletterForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = newsletterEmail.value.trim();
       if (!email) return;
 
-      const subscribers = AdminService.getSubscribers();
-      if (!subscribers.includes(email)) {
-        subscribers.push(email);
-        localStorage.setItem('vege_newsletter_subscribers', JSON.stringify(subscribers));
+      try {
+        if (db) {
+          // Save to Firestore
+          const query = await db.collection("subscribers").where("email", "==", email.toLowerCase()).get();
+          if (query.empty) {
+            await db.collection("subscribers").add({ email: email.toLowerCase(), date: new Date().toISOString() });
+          }
+        }
+      } catch (err) {
+        console.error("Firestore subscription error", err);
       }
 
       newsletterEmail.value = '';
