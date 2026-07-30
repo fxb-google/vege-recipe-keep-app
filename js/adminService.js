@@ -4,14 +4,19 @@
  */
 
 const AdminService = {
-  // Hardcoded secrets REMOVED. Using Firebase Auth.
+  _isLocalAdminLoggedIn: false,
 
   /**
-   * Verify email & password against Firebase Authentication
+   * Verify email & password against Firebase Authentication or use local fallback
    */
   async authenticate(email, password) {
     if (!auth) {
-      return { success: false, error: "Firebase Auth not initialized. Check firebaseConfig.js" };
+      // Local fallback
+      if (email === 'admin' && password === 'admin') {
+        this._isLocalAdminLoggedIn = true;
+        return { success: true };
+      }
+      return { success: false, error: "Invalid credentials (use admin/admin for local mode)" };
     }
     
     try {
@@ -24,13 +29,16 @@ const AdminService = {
   },
 
   isAdminLoggedIn() {
-    return auth && auth.currentUser !== null;
+    if (!auth) return this._isLocalAdminLoggedIn;
+    return auth.currentUser !== null;
   },
 
   async logout() {
-    if (auth) {
-      await auth.signOut();
+    if (!auth) {
+      this._isLocalAdminLoggedIn = false;
+      return;
     }
+    await auth.signOut();
   },
 
   /**
